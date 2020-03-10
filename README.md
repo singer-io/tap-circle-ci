@@ -98,4 +98,4 @@ This tap:
     More information on singer targets [here](https://github.com/singer-io/getting-started/blob/master/docs/RUNNING_AND_DEVELOPING.md#running-a-singer-tap-with-a-singer-target).
 ---
 
-Copyright &copy; 2020 Sisu Data
+Copyright &copy; 2020 Stitch
