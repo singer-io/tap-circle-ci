@@ -14,5 +14,6 @@ test_alpha:
 	too-many-branches,too-many-lines,too-many-locals,ungrouped-imports,\
 	wrong-spelling-in-comment,wrong-spelling-in-docstring,\
 	unnecessary-comprehension,too-many-nested-blocks,redefined-builtin,\
-	bad-whitespace,dangerous-default-value
+	bad-whitespace,dangerous-default-value,bad-continuation,unused-variable,\
+	logging-format-interpolation,unused-argument
 

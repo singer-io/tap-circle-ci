@@ -8,7 +8,7 @@ jobs:
       - run:
           name: 'Setup virtual env'
           command: |
-            python3 -mvenv /usr/local/share/virtualenvs/tap-circle-ci
+            $(pyenv root)/versions/3.6.9/bin/python3 -mvenv /usr/local/share/virtualenvs/tap-circle-ci
             source /usr/local/share/virtualenvs/tap-circle-ci/bin/activate
             pip install -U 'pip<19.2' setuptools
             pip install .[dev]
