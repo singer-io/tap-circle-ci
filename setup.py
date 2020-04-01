@@ -15,6 +15,11 @@ setup(
         "pytest",
         "mock"
     ],
+    extras_require={
+        'dev': [
+            'pylint==2.4.4'
+        ]
+    },
     entry_points="""
     [console_scripts]
     tap-circle-ci=tap_circle_ci:main
