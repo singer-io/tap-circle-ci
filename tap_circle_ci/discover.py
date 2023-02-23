@@ -13,8 +13,7 @@ def discover(config: Dict = None):
     """Performs Discovery for tap-circle-ci."""
     if config:
         client = Client(config)
-        # TODO AUTH CHECK
-
+        client.get("https://circleci.com/api/v2/me", {}, {})
     streams = []
     for stream_name, stream in STREAMS.items():
         schema_path = get_abs_path(f" --/{stream_name}.json")

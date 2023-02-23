@@ -1,22 +1,47 @@
-version: 2
+version: 2.1
 jobs:
   build:
     docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester-v4
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
     steps:
       - checkout
       - run:
           name: 'Setup virtual env'
           command: |
-            $(pyenv root)/versions/3.6.9/bin/python3 -mvenv /usr/local/share/virtualenvs/tap-circle-ci
+            python3 -mvenv /usr/local/share/virtualenvs/tap-circle-ci
             source /usr/local/share/virtualenvs/tap-circle-ci/bin/activate
-            pip install -U 'pip<19.2' setuptools
+            pip install -U 'pip==22.2.2' 'setuptools==65.3.0'
             pip install .[dev]
+      - run:
+          name: 'JSON Validator'
+          command: |
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            stitch-validate-json tap_circle_ci/schemas/*.json
       - run:
           name: 'pylint'
           command: |
             source /usr/local/share/virtualenvs/tap-circle-ci/bin/activate
-            make test_alpha
+            pylint tap_circle_ci -d C,R,W
+      - add_ssh_keys
+      - run:
+          name: 'Unit Tests'
+          command: |
+            source /usr/local/share/virtualenvs/tap-circle-ci/bin/activate
+            pip install nose coverage
+            nosetests --with-coverage --cover-erase --cover-package=tap_circle_ci --cover-html-dir=htmlcov tests/unittests
+            coverage html
+      - store_test_results:
+          path: test_output/report.xml
+      - store_artifacts:
+          path: htmlcov
+      - run:
+          name: 'Integration Tests'
+          command: |
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
+            source dev_env.sh
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            run-test --tap=tap-circle-ci tests
+
 
 workflows:
   version: 2

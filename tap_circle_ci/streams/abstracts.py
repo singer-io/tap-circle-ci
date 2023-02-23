@@ -186,5 +186,3 @@ class FullTableStream(BaseStream):
         """A wrapper for singer.get_bookmark to deal with compatibility for
         bookmark values or start values."""
         return write_bookmark(state, self.tap_stream_id, key, value)
-
-
