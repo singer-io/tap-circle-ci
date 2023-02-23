@@ -69,7 +69,6 @@ class Pipelines(IncrementalStream, UrlEndpointMixin):
         return state
 
     def prefetch_pipeline_ids(self, project) -> List:
-        # return ["1596bda8-204d-4fe6-9471-ccccdf043993","30cd6235-b5c5-4e59-85d5-1e575ae96e26","30e8714a-7eb8-4cb7-9e8b-0d4d780c9fa6"]
         """Helper method implemented for other streams to load all parent
         pipeline_ids.
 
