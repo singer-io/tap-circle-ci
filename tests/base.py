@@ -42,7 +42,7 @@ class CircleCiBaseTest(unittest.TestCase):
 
     def get_type(self):
         """The expected url route ending."""
-        return "platform.yotpo"
+        return "platform.circle_ci"
 
     @staticmethod
     def tap_name():

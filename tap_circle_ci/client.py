@@ -41,6 +41,8 @@ class Client:
      - HTTP Error handling and retry
     """
 
+    default_response = {"items":[]}
+
     def __init__(self, config: Mapping[str, Any]) -> None:
         self.config = config
         self._session = session()
@@ -76,6 +78,7 @@ class Client:
             errors.Http502RequestError,
             errors.Http503RequestError,
             errors.Http504RequestError,
+            requests.ConnectionError,
         ),
         jitter=None,
         max_tries=5,
@@ -101,7 +104,7 @@ class Client:
             self.req_counter.increment()
         if response.status_code != 200:
             try:
-                LOGGER.error("Failed due: %s", response.text)
+                LOGGER.error("Status: %s Message: %s", response.status_code, response.text)
             except AttributeError:
                 pass
             try:
@@ -111,6 +114,6 @@ class Client:
                 raise err
             except errors.Http404RequestError:
                 LOGGER.error("Resource Not Found %s", response.url or "")
-                return {"items": {}}
+                return self.default_response
             return None
         return response.json()

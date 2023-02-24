@@ -16,7 +16,7 @@ def discover(config: Dict = None):
         client.get("https://circleci.com/api/v2/me", {}, {})
     streams = []
     for stream_name, stream in STREAMS.items():
-        schema_path = get_abs_path(f" --/{stream_name}.json")
+        schema_path = get_abs_path(f"schemas/{stream_name}.json")
         with open(schema_path, encoding="utf-8") as schema_file:
             schema = json.load(schema_file)
         streams.append(
