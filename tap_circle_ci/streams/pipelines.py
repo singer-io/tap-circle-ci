@@ -4,12 +4,12 @@ from typing import Dict, Iterator, List
 from singer import Transformer, get_logger, metrics, write_record
 from singer.utils import strftime, strptime_to_utc
 
-from .abstracts import IncrementalStream, UrlEndpointMixin
+from .abstracts import IncrementalStream
 
 LOGGER = get_logger()
 
 
-class Pipelines(IncrementalStream, UrlEndpointMixin):
+class Pipelines(IncrementalStream):
     """class for `pipeline` stream."""
 
     stream = "pipelines"
