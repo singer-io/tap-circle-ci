@@ -1,4 +1,5 @@
 """tap-circle-ci product-reviews stream module."""
+#pylint: disable=R0801
 from datetime import datetime
 from typing import Dict, List, Tuple
 
