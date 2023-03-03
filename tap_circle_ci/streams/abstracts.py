@@ -1,4 +1,5 @@
 """tap-circle-ci abstract stream module."""
+#pylint: disable=W0223
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Tuple
 
