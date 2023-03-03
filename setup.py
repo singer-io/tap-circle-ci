@@ -5,19 +5,21 @@ setup(
     name="tap-circle-ci",
     version="0.1.2",
     description="Singer.io tap for extracting data from circle ci",
-    author="Sisu Data;Stitch",
-    url="https://singer.io",
+    author="Sisu Data",
+    url="http://sisu.ai",
     classifiers=["Programming Language :: Python :: 3 :: Only"],
     py_modules=["tap_circle_ci"],
     install_requires=[
         "singer-python==5.13.0",
-        "requests==2.20.0",
+        "requests",
+        "pytest",
+        "mock"
     ],
     extras_require={
-        "dev": [
-            "pylint==2.4.4",
-            "pytest",
-            "mock"]},
+        'dev': [
+            'pylint==2.4.4'
+        ]
+    },
     entry_points="""
     [console_scripts]
     tap-circle-ci=tap_circle_ci:main

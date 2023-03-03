@@ -20,7 +20,7 @@ def raise_for_error(response: requests.Response) -> None:
     """
     try:
         response.raise_for_status()
-    except (requests.HTTPError, requests.ConnectionError) as _:
+    except (requests.HTTPError, requests.ConnectionError) as http_err:
         try:
             error_code = response.status_code
             client_exception = getattr(
@@ -28,7 +28,7 @@ def raise_for_error(response: requests.Response) -> None:
             )
             raise client_exception from None
         except (ValueError, TypeError, AttributeError):
-            raise errors.ClientError(_) from None
+            raise errors.ClientError(http_err) from None
 
 
 class Client:
