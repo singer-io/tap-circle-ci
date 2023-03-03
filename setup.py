@@ -5,7 +5,7 @@ setup(
     name="tap-circle-ci",
     version="0.1.2",
     description="Singer.io tap for extracting data from circle ci",
-    author="Stitch",
+    author="Sisu Data;Stitch",
     url="https://singer.io",
     classifiers=["Programming Language :: Python :: 3 :: Only"],
     py_modules=["tap_circle_ci"],
@@ -13,12 +13,18 @@ setup(
         "singer-python==5.13.0",
         "requests==2.20.0",
     ],
-    extras_require={"dev": ["pylint==2.4.4", "pytest", "mock"]},
+    extras_require={
+        "dev": [
+            "pylint==2.4.4",
+            "pytest",
+            "mock"]},
     entry_points="""
     [console_scripts]
     tap-circle-ci=tap_circle_ci:main
     """,
     packages=["tap_circle_ci"],
-    package_data={"schemas": ["tap_circle_ci/schemas/*.json"]},
+    package_data={
+        "schemas": ["tap_circle_ci/schemas/*.json"]
+    },
     include_package_data=True,
 )
