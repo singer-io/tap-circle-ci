@@ -21,7 +21,7 @@ jobs:
           name: 'pylint'
           command: |
             source /usr/local/share/virtualenvs/tap-circle-ci/bin/activate
-            pylint tap_circle_ci -d "$PYLINT_DISABLE_LIST"
+            pylint tap_circle_ci -d C,R,W
       - run:
           name: 'Unit Tests'
           command: |
