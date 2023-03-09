@@ -5,6 +5,7 @@ from datetime import timedelta
 import dateutil.parser
 from tap_tester import connections, menagerie, runner
 from tap_tester.logger import LOGGER
+from singer.utils import strptime_to_utc
 
 
 class CircleCiBookMarkTest(CircleCiBaseTest):
@@ -52,8 +53,6 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
         first_sync_record_count = self.run_and_verify_sync(conn_id)
         first_sync_records = runner.get_records_from_target_output()
         first_sync_bookmarks = menagerie.get_state(conn_id)
-        LOGGER.info("Current Bookmarks %s ",first_sync_bookmarks)
-
 
         ##########################################################################
         # Update State Between Syncs
@@ -74,6 +73,9 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
         ##########################################################################
         # Test By Stream
         ##########################################################################
+
+
+        bookmark_keys = {"pipelines":"project_slug", "workflows": "pipeline_id"}
 
         for stream in expected_streams:
             with self.subTest(stream=stream):
@@ -100,15 +102,9 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
                 if expected_replication_method == self.INCREMENTAL:
                     # Collect information specific to incremental streams from syncs 1 & 2
                     replication_key = next(iter(expected_replication_keys[stream]))
-                    first_bookmark_value_utc = {
-                        k: self.convert_state_to_utc(v) for k, v in first_bookmark.items()
-                    }
-                    second_bookmark_value_utc = {
-                        k: self.convert_state_to_utc(v) for k, v in second_bookmark.items()
-                    }
-                    simulated_bookmark_value = {
-                        key: self.convert_state_to_utc(value) for key, value in new_state["bookmarks"][stream].items()
-                    }
+                    first_bmk_value = {k: strptime_to_utc(v) for k, v in first_bookmark.items()}
+                    second_bmk_value = {k: strptime_to_utc(v) for k, v in second_bookmark.items()}
+                    simulated_bmk_value = {key: strptime_to_utc(value) for key, value in new_state["bookmarks"][stream].items()}
 
                     # Verify the first sync sets a bookmark of the expected form
                     self.assertIsNotNone(first_bookmark)
@@ -118,18 +114,24 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
 
                     # Verify the second sync bookmark is Equal to the first sync bookmark
                     # assumes no changes to data during test
-                    for key,bookmark in first_bookmark_value_utc.items():
-                        self.assertGreaterEqual(second_bookmark_value_utc.get(key), bookmark)
+                    for key,bookmark in first_bmk_value.items():
+                        self.assertGreaterEqual(second_bmk_value.get(key), bookmark)
 
-                    bookmark_keys = {
-                        "pipelines":"project_slug",
-                        "workflows": "pipeline_id",
-                    }
+                    # Verify that you get less than or equal to data getting at 2nd time around
+                    self.assertLessEqual(
+                        second_sync_count,
+                        first_sync_count,
+                        msg="second sync didn't have less records, bookmark usage not verified",
+                    )
 
+
+                    bookmark_record_key = bookmark_keys[stream]
                     for record in first_sync_messages:
                         try:
-                            replication_key_value = record.get(replication_key)
-                            first_bookmark_value_utc_value = first_bookmark_value_utc[record[bookmark_keys[stream]]]
+                            replication_key_value = strptime_to_utc(record.get(replication_key))
+                            first_bookmark_value_utc_value = first_bmk_value[record[bookmark_record_key]]
+
+                            # check that the bookmark value of the first sync is max value of all the records
                             self.assertLessEqual(
                                 replication_key_value,
                                 first_bookmark_value_utc_value,
@@ -141,14 +143,11 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
 
                     for record in second_sync_messages:
                         try:
-                            replication_key_value = record.get(replication_key)
-                            simulated_bookmark = simulated_bookmark_value[record[bookmark_keys[stream]]]
-                            self.assertGreaterEqual(
-                                replication_key_value,
-                                simulated_bookmark,
-                                msg="Second sync records do not repeat the previous bookmark.",
-                            )
-                            second_bookmark_value_utc_value = second_bookmark_value_utc[record[bookmark_keys[stream]]]
+                            replication_key_value = strptime_to_utc(record.get(replication_key))
+                            second_bookmark_value_utc_value = second_bmk_value[record[bookmark_record_key]]
+                            simulated_bookmark = simulated_bmk_value[record[bookmark_record_key]]
+
+
                             # Verify the second sync bookmark value is the max replication key value for a given stream
                             self.assertLessEqual(
                                 replication_key_value,
@@ -156,96 +155,29 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
                                 msg="Second sync bookmark was set incorrectly, \
                                                     a record with a greater replication-key value was synced.",
                             )
+
+                            # check that all records synced hold a replication key value higher than the simulated bookmark value
+                            self.assertGreaterEqual(
+                                replication_key_value,
+                                simulated_bookmark,
+                                msg="Second sync records do not repeat the previous bookmark.",
+                            )
+
                         except KeyError:
                             LOGGER.info("Key not found in the second bookmark value %s %s %s",replication_key_value, simulated_bookmark,second_bookmark_value_utc_value)
-        #             else:
-        #                 first_bookmark_value = first_bookmark_key_value.get(replication_key)
-        #                 second_bookmark_value = second_bookmark_key_value.get(replication_key)
-        #                 first_bookmark_value_utc = self.convert_state_to_utc(first_bookmark_value)
-        #                 second_bookmark_value_utc = self.convert_state_to_utc(second_bookmark_value)
-        #                 simulated_bookmark_value = self.convert_state_to_utc(
-        #                     new_states["bookmarks"][stream][replication_key]
-        #                 )
 
-        #                 # Subtracting the days as per the lookback window value
-        #                 if stream == "emails":
-        #                     simulated_bookmark_minus_lookback = self.timedelta_formatted(
-        #                         simulated_bookmark_value,
-        #                         self.BOOKMARK_COMPARISON_FORMAT,
-        #                         days=expected_email_lookback_window,
-        #                     )
-        #                 elif stream == "reviews":
-        #                     simulated_bookmark_minus_lookback = self.timedelta_formatted(
-        #                         simulated_bookmark_value,
-        #                         self.BOOKMARK_COMPARISON_FORMAT,
-        #                         days=expected_review_lookback_window,
-        #                     )
-        #                 else:
-        #                     simulated_bookmark_minus_lookback = simulated_bookmark_value
+                elif expected_replication_method == self.FULL_TABLE:
 
-        #                 # Verify the first sync sets a bookmark of the expected form
-        #                 self.assertIsNotNone(first_bookmark_key_value)
-        #                 self.assertIsNotNone(first_bookmark_value)
+                    # Verify the syncs do not create bookmark for full table streams
+                    self.assertEqual(first_bookmark,{})
+                    self.assertEqual(second_bookmark,{})
 
-        #                 # Verify the second sync sets a bookmark of the expected form
-        #                 self.assertIsNotNone(second_bookmark_key_value)
-        #                 self.assertIsNotNone(second_bookmark_value)
-
-        #                 # Verify the second sync bookmark is Equal to the first sync bookmark
-        #                 # assumes no changes to data during test
-        #                 self.assertEqual(second_bookmark_value, first_bookmark_value)
-
-        #                 for record in first_sync_messages:
-        #                     # Verify the first sync bookmark value is the max replication key value for a given stream
-        #                     replication_key_value = record.get(replication_key)
-        #                     self.assertLessEqual(
-        #                         replication_key_value,
-        #                         first_bookmark_value_utc,
-        #                         msg="First sync bookmark was set incorrectly, \
-        #                                          a record with a greater replication-key value was synced.",
-        #                     )
-
-        #                 for record in second_sync_messages:
-        #                     replication_key_value = record.get(replication_key)
-        #                     self.assertGreaterEqual(
-        #                         strptime_to_utc(replication_key_value),
-        #                         strptime_to_utc(simulated_bookmark_minus_lookback),
-        #                         msg="Second sync records do not repeat the previous bookmark.",
-        #                     )
-
-        #                     # Verify the second sync bookmark value is the max replication key value for a given stream
-        #                     self.assertLessEqual(
-        #                         replication_key_value,
-        #                         second_bookmark_value_utc,
-        #                         msg="Second sync bookmark was set incorrectly, \
-        #                                          a record with a greater replication-key value was synced.",
-        #                     )
-
-        #             # Verify that you get less than or equal to data getting at 2nd time around
-        #             self.assertLessEqual(
-        #                 second_sync_count,
-        #                 first_sync_count,
-        #                 msg="second sync didn't have less records, bookmark usage not verified",
-        #             )
-
-        #         elif expected_replication_method == self.FULL_TABLE:
-
-        #             # Verify the syncs do not set a bookmark for full table streams
-        #             self.assertIsNone(first_bookmark_key_value)
-        #             self.assertIsNone(second_bookmark_key_value)
-
-        #             # Verify the number of records in the second sync is the same as the first
-        #             self.assertEqual(second_sync_count, first_sync_count)
-        #         else:
-        #             raise NotImplementedError(
-        #                 "INVALID EXPECTATIONS\t\tSTREAM: {} \
-        #                                       REPLICATION_METHOD: {}".format(
-        #                     stream, expected_replication_method
-        #                 )
-        #             )
-
-        #         # Verify at least 1 record was replicated in the second sync
-        #         self.assertGreater(second_sync_count, 0, msg=f"We are not fully testing bookmarking for {stream}")
+                    # Verify the number of records in the second sync is the same as the first
+                    self.assertEqual(second_sync_count, first_sync_count)
+                else:
+                    raise NotImplementedError(f"INVALID EXPECTATIONS STREAM: {stream} REPLICATION_METHOD: {expected_replication_method}")
+                # Verify at least 1 record was replicated in the second sync
+                self.assertGreater(second_sync_count, 0, msg=f"We are not fully testing bookmarking for {stream}")
 
 
 
@@ -266,6 +198,9 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
                 bmk_converted = dateutil.parser.parse(bookmark_value)
                 diff_bmk_value = bmk_converted - timedelta(**stream_timedelta[stream])
                 calculated_state_formatted = dt.strftime(diff_bmk_value, self.BOOKMARK_COMPARISON_FORMAT)
+                LOGGER.info("%s curr key %s old %s new",parent_key,bmk_converted,diff_bmk_value)
                 new_state[parent_key] = calculated_state_formatted
             diff_state[stream] = new_state
+            LOGGER.info("%s curr bmkkkkk",diff_state)
+
         return diff_state
