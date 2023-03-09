@@ -1,5 +1,6 @@
 """tap-circle-ci product-reviews stream module."""
 from typing import Dict, List, Tuple
+import hashlib
 
 from singer import (
     Transformer,
@@ -70,6 +71,10 @@ class Jobs(FullTableStream):
                     LOGGER.info("Syncing jobs for workflow *****%s (%s/%s)", workflow_id[-4:], index, prod_len)
                     for rec in self.get_records(workflow_id):
                         rec["_workflow_id"], rec["_pipeline_id"] = workflow_id, pipeline_id
+                        hash_string = rec["_workflow_id"]+rec["id"]
+                        hash_string_bytes = hash_string.encode('utf-8')
+                        hashed_string = hashlib.sha256(hash_string_bytes).hexdigest()
+                        rec['_sdc_record_hash'] = hashed_string
                         write_record(self.tap_stream_id, transformer.transform(rec, schema, stream_metadata))
                         counter.increment()
                     state = self.write_bookmark(state, "currently_syncing", workflow_id)

@@ -276,13 +276,12 @@ class CircleCiBaseTest(unittest.TestCase):
             interrupt_stream_bookmark.pop("offset", None)
 
             bookmark_keys = {
-                "product_reviews": "product_yotpo_id",
-                "order_fulfillments": "order_id",
-                "product_variants": "yotpo_product_id",
+                "pipelines": "project_slug",
+                "workflows": "pipeline_id",
             }
 
             replication_key = next(iter(expected_replication_keys[interrupt_stream]))
-            if interrupt_stream in {"order_fulfillments", "product_reviews", "product_variants"}:
+            if interrupt_stream in {"pipelines", "worksflows"}:
                 interrupt_stream_rec = {}
                 for record in sync_records.get(interrupt_stream).get("messages"):
                     if record.get("action") == "upsert":
