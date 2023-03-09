@@ -112,7 +112,7 @@ class CircleCiBaseTest(unittest.TestCase):
 
     def get_credentials(self):
         """Authentication information for the test account."""
-        return {"token": os.getenv("TAP_CIRCLE_CI_TOKEN")}
+        return {"token": os.getenv("TAP_CIRCLE_CI_ACCESS_TOKEN")}
 
     def get_properties(self, original: bool = True):
         """Configuration of properties required for the tap."""
