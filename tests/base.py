@@ -254,56 +254,6 @@ class CircleCiBaseTest(unittest.TestCase):
         except ValueError:
             return Exception(f"Datetime object is not of the format: {dt_format}")
 
-    def calculated_states_by_stream(self, current_state):
-        """Look at the bookmarks from a previous sync and set a new bookmark
-        value based off timedelta expectations.
-
-        This ensures the subsequent sync will replicate at least 1
-        record but, fewer records than the previous sync. If the test
-        data is changed in the future this will break expectations for
-        this test.
-        """
-        timedelta_by_stream = {
-            stream: [0, 0, 0, 5]  # {stream_name: [days, hours, minutes, seconds], ...}
-            for stream in self.expected_streams()
-        }
-
-        stream_to_calculated_state = {stream: "" for stream in current_state["bookmarks"].keys()}
-        for stream, state in current_state["bookmarks"].items():
-            state_format = "%Y-%m-%dT%H:%M:%S-00:00"
-            if stream in ["product_reviews", "order_fulfillments", "product_variants"]:
-                new_state = {}
-                for state_key in state.keys():
-                    state_value = next(iter(state.values()))
-                    state_as_datetime = dateutil.parser.parse(state_value)
-
-                    calculated_state_as_datetime = state_as_datetime - timedelta(*timedelta_by_stream[stream])
-                    calculated_state_formatted = dt.strftime(calculated_state_as_datetime, state_format)
-
-                    new_state[state_key] = calculated_state_formatted
-                stream_to_calculated_state[stream] = new_state
-            else:
-                state_key, state_value = next(iter(state.keys())), next(iter(state.values()))
-                state_as_datetime = dateutil.parser.parse(state_value)
-
-                days, hours, minutes, seconds = timedelta_by_stream[stream]
-                calculated_state_as_datetime = state_as_datetime - timedelta(
-                    days=days, hours=hours, minutes=minutes, seconds=seconds
-                )
-                calculated_state_formatted = dt.strftime(calculated_state_as_datetime, state_format)
-
-                stream_to_calculated_state[stream] = {state_key: calculated_state_formatted}
-
-        return stream_to_calculated_state
-
-    def convert_state_to_utc(self, date_str):
-        """Convert a saved bookmark value of the form
-        '2020-08-25T13:17:36-07:00' to a string formatted utc datetime, in
-        order to compare aginast json formatted datetime values."""
-        date_object = dateutil.parser.parse(date_str)
-        date_object_utc = date_object.astimezone(tz=pytz.UTC)
-        return dt.strftime(date_object_utc, self.BOOKMARK_COMPARISON_FORMAT)
-
     def is_incremental(self, stream):
         """Checking if the given stream is incremental or not."""
         return self.expected_metadata().get(stream).get(self.REPLICATION_METHOD) == self.INCREMENTAL
