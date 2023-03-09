@@ -43,7 +43,7 @@ class Pipelines(IncrementalStream):
 
     def sync(self, state: Dict, schema: Dict, stream_metadata: Dict, transformer: Transformer) -> Dict:
         """Implementation for `type: Incremental` stream."""
-        current_bookmark_date = self.get_bookmark(state, f"{self.replication_key}_{self.project}")
+        current_bookmark_date = self.get_bookmark(state, f"{self.project}")
         pipeline_ids = []
         max_bookmark = current_bookmark_date_utc = strptime_to_utc(current_bookmark_date)
 
@@ -64,7 +64,7 @@ class Pipelines(IncrementalStream):
                 self.client.shared_pipeline_ids = {}
             self.client.shared_pipeline_ids.update({self.project: pipeline_ids})
             state = self.write_bookmark(
-                state, key=f"{self.replication_key}_{self.project}", value=strftime(max_bookmark)
+                state, key=f"{self.project}", value=strftime(max_bookmark)
             )
         return state
 

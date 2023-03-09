@@ -1,5 +1,4 @@
 """tap-circle-ci product-reviews stream module."""
-#pylint: disable=R0801
 from datetime import datetime
 from typing import Dict, List, Tuple
 
@@ -53,7 +52,7 @@ class Workflows(IncrementalStream):
         config_start = self.client.config.get(self.config_start_key, False)
         bookmark_date = bookmark_date or config_start
         bookmark_date = current_max = max(strptime_to_utc(bookmark_date), strptime_to_utc(config_start))
-        filtered_records = []
+        filtered_records, parent_record_ids = [], []
         while True:
             response = self.client.get(extraction_url, params, {})
             raw_records = response.get("items", [])
@@ -61,6 +60,7 @@ class Workflows(IncrementalStream):
             if not raw_records:
                 break
             for record in raw_records:
+                parent_record_ids.append((record["id"], pipeline_id))
                 record_timestamp = strptime_to_utc(record[self.replication_key])
                 if record_timestamp >= bookmark_date:
                     current_max = max(current_max, record_timestamp)
@@ -68,8 +68,7 @@ class Workflows(IncrementalStream):
             if next_page_token is None:
                 break
             params["page-token"] = next_page_token
-
-        return (filtered_records, current_max)
+        return (parent_record_ids, filtered_records, current_max)
 
     def sync(self, state: Dict, schema: Dict, stream_metadata: Dict, transformer: Transformer) -> Dict:
         """Sync implementation for `product_reviews` stream."""
@@ -83,9 +82,9 @@ class Workflows(IncrementalStream):
                 for index, pipeline_id in enumerate(pipelines[start_index:], max(start_index, 1)):
                     LOGGER.info("Syncing workflows for pipeline *****%s (%s/%s)", pipeline_id[-4:], index, prod_len)
                     bookmark_date = self.get_bookmark(state, pipeline_id)
-                    records, max_bookmark = self.get_records(pipeline_id, bookmark_date)
+                    parent_record_ids, records, max_bookmark = self.get_records(pipeline_id, bookmark_date)
+                    pipeline_wflo_ids += parent_record_ids
                     for rec in records:
-                        pipeline_wflo_ids.append((rec["id"], pipeline_id))
                         write_record(self.tap_stream_id, transformer.transform(rec, schema, stream_metadata))
                         counter.increment()
 
@@ -95,6 +94,7 @@ class Workflows(IncrementalStream):
                     write_state(state)
                 if self.client.shared_workflow_ids is None:
                     self.client.shared_workflow_ids = {}
+            pipeline_wflo_ids.sort(key=lambda x: x[1])
             self.client.shared_workflow_ids.update({self.project: pipeline_wflo_ids})
             state = clear_bookmark(state, self.tap_stream_id, "currently_syncing")
         return state
@@ -109,22 +109,18 @@ class Workflows(IncrementalStream):
         workflow_ids = self.client.shared_workflow_ids or {}
         pipeline_wflo_ids = []
         self.project = project
-        if workflow_ids and project in workflow_ids:
-            return workflow_ids[project]
+        if workflow_ids and self.project in workflow_ids:
+            return workflow_ids[self.project]
 
-        project_pipeline_ids = Pipelines(self.client).prefetch_pipeline_ids(project)
+        project_pipeline_ids = Pipelines(self.client).prefetch_pipeline_ids(self.project)
         LOGGER.info("Fetching all workflow records for Pipelines")
         pipeline_len = len(project_pipeline_ids)
         LOGGER.info("Total Pipelines %s for project %s", pipeline_len, self.project)
         pipeline_wflo_ids = []
         for index, pipeline_id in enumerate(project_pipeline_ids):
             LOGGER.info("Fetching workflows for pipeline *****%s (%s/%s)", pipeline_id[-4:], index, pipeline_len)
-            records, _ = self.get_records(pipeline_id, None)
-            for record in records:
-                try:
-                    pipeline_wflo_ids.append((record["id"], pipeline_id))
-                except KeyError:
-                    LOGGER.warning("Unable to find workflow ID")
+            parent_ids, *_ = self.get_records(pipeline_id, None)
+            pipeline_wflo_ids += parent_ids
         pipeline_wflo_ids.sort(key=lambda x: x[1])
         self.client.shared_workflow_ids = pipeline_wflo_ids
         return pipeline_wflo_ids
