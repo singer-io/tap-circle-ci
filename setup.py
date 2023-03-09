@@ -13,7 +13,7 @@ setup(
         "singer-python==5.13.0",
         "requests==2.20.0",
     ],
-    extras_require={"dev": ["pylint==2.4.4", "pytest", "mock"]},
+    extras_require={"dev": ["pylint", "pytest", "mock"]},
     entry_points="""
     [console_scripts]
     tap-circle-ci=tap_circle_ci:main
