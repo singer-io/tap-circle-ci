@@ -22,7 +22,6 @@ jobs:
           command: |
             source /usr/local/share/virtualenvs/tap-circle-ci/bin/activate
             pylint tap_circle_ci -d "$PYLINT_DISABLE_LIST"
-      - add_ssh_keys
       - run:
           name: 'Unit Tests'
           command: |
