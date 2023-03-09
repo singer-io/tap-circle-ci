@@ -36,10 +36,8 @@ class CircleCiBaseTest(unittest.TestCase):
 
     def setUp(self):
         """Checking required environment variables."""
-        pass
-        # missing_envs = [x for x in [os.getenv("TAP_YOTPO_API_KEY"), os.getenv("TAP_YOTPO_API_SECRET")] if x is None]
-        # if len(missing_envs) != 0:
-        #     raise Exception("Missing test-required environment variables")
+        if os.getenv("TAP_CIRCLE_CI_ACCESS_TOKEN",None) == None:
+            raise Exception("Missing test-required environment variables")
 
     def get_type(self):
         """The expected url route ending."""
