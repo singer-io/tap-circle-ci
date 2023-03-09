@@ -1,6 +1,6 @@
 """tap-circle-ci product-reviews stream module."""
 from typing import Dict, List, Tuple
-import hashlib
+from hashlib import sha256 as sha256_encode
 
 from singer import (
     Transformer,
@@ -23,7 +23,7 @@ class Jobs(FullTableStream):
 
     stream = "jobs"
     tap_stream_id = "jobs"
-    key_properties = ["id"]
+    key_properties = ["id","_sdc_record_hash"]
     url_endpoint = "https://circleci.com/api/v2/workflow/WORKFLOW_ID/job"
     project = None
 
@@ -70,11 +70,13 @@ class Jobs(FullTableStream):
                 for index, (workflow_id, pipeline_id) in enumerate(pipelines[start_index:], max(start_index, 1)):
                     LOGGER.info("Syncing jobs for workflow *****%s (%s/%s)", workflow_id[-4:], index, prod_len)
                     for rec in self.get_records(workflow_id):
+
+                        # The same job can be fetched multiple times as it relates to 
+                        # multiple parents i.e workflows, this creates a composite key with the parent_id
+                        comp_key = workflow_id + rec["id"]
+                        hash_encoded = comp_key.encode('utf-8')
+                        rec['_sdc_record_hash'] = sha256_encode(hash_encoded).hexdigest()
                         rec["_workflow_id"], rec["_pipeline_id"] = workflow_id, pipeline_id
-                        hash_string = rec["_workflow_id"]+rec["id"]
-                        hash_string_bytes = hash_string.encode('utf-8')
-                        hashed_string = hashlib.sha256(hash_string_bytes).hexdigest()
-                        rec['_sdc_record_hash'] = hashed_string
                         write_record(self.tap_stream_id, transformer.transform(rec, schema, stream_metadata))
                         counter.increment()
                     state = self.write_bookmark(state, "currently_syncing", workflow_id)

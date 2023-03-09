@@ -17,6 +17,12 @@
         "string"
       ]
     },
+    "_sdc_record_hash": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
     "dependencies": {
       "type": [
         "null",
