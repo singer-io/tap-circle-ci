@@ -116,7 +116,7 @@ class CircleCiBaseTest(unittest.TestCase):
         """Configuration of properties required for the tap."""
         return_value = {
             "start_date": "2022-07-01T00:00:00Z",
-            "project_slugs": "gh/singer-io/tap-ga4 gh/singer-io/singer-python",
+            "project_slugs": os.getenv("TAP_CIRCLE_CI_PROJECTS"),
         }
         if original:
             return return_value
