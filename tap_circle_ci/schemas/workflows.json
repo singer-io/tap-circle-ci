@@ -54,6 +54,30 @@
         "null",
         "string"
       ]
+    },
+    "started_by": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "errored_by": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "canceled_by": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "tag": {
+      "type": [
+        "null",
+        "string"
+      ]
     }
   }
 }

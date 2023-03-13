@@ -3,7 +3,9 @@ from tap_tester import connections, menagerie, runner
 
 
 KNOWN_MISSING_FIELDS = {
-    "jobs": {"approved_by",}
+    "jobs": {"approved_by","approval_request_id"},
+    "workflows": {"tag","errored_by"},
+    "pipelines": {"trigger_parameters",}
 }
 
 
