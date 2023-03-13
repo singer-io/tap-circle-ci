@@ -138,6 +138,9 @@ class CircleCiStartDateTest(CircleCiBaseTest):
                     # Verify the number of records replicated in sync 1 is greater than the number
                     # of records replicated in sync 2
                     self.assertGreaterEqual(record_count_sync_1, record_count_sync_2)
+                    
+                    # verify that records are
+                    self.assertGreater(record_count_sync_1, 0 ,msg=f"No records for stream {stream} in sync 1")
 
                     # Verify the records replicated in sync 2 were also replicated in sync 1
                     self.assertTrue(primary_keys_sync_2.issubset(primary_keys_sync_1))

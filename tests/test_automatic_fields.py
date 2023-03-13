@@ -41,7 +41,7 @@ class CircleCiAutomaticFields(CircleCiBaseTest):
         )
 
         # Run initial sync
-        self.run_and_verify_sync(conn_id)
+        record_count = self.run_and_verify_sync(conn_id)
         synced_records = runner.get_records_from_target_output()
 
         for stream in expected_streams:
@@ -49,6 +49,9 @@ class CircleCiAutomaticFields(CircleCiBaseTest):
                 # Expected values
                 expected_keys = self.expected_automatic_fields().get(stream)
                 expected_primary_keys = self.expected_primary_keys()[stream]
+
+                # check if atleast 1 record is synced
+                self.assertGreater(record_count.get(stream,0), 0)
 
                 # Collect actual values
                 data = synced_records.get(stream, {})

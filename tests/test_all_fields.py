@@ -47,8 +47,7 @@ class CircleCiAllFields(CircleCiBaseTest):
             ]
             stream_to_all_catalog_fields[stream_name] = set(fields_from_field_level_md)
 
-        self.run_and_verify_sync(conn_id)
-
+        record_count = self.run_and_verify_sync(conn_id)
         synced_records = runner.get_records_from_target_output()
 
         # Verify no unexpected streams were replicated
@@ -67,6 +66,9 @@ class CircleCiAllFields(CircleCiBaseTest):
                     expected_automatic_keys.issubset(expected_all_keys),
                     msg=f'{expected_automatic_keys - expected_all_keys} is not in "expected_all_keys"',
                 )
+
+                # check if atleast 1 record is synced
+                self.assertGreater(record_count.get(stream,0), 0)
 
                 messages = synced_records.get(stream)
                 # Collect actual values
