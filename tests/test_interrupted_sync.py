@@ -1,5 +1,4 @@
 from base import CircleCiBaseTest
-from singer.utils import strptime_to_utc
 from tap_tester import connections, menagerie, runner
 from tap_tester.logger import LOGGER
 
@@ -124,25 +123,25 @@ class CircleCiInterruptedSyncTest(CircleCiBaseTest):
                             }
 
                             for record in interrupted_records:
-                                rec_time = strptime_to_utc(record.get(replication_key))
+                                rec_time = self.strptime_to_utc(record.get(replication_key))
                                 rec_repl_key = str(record[repl_key[stream]])
                                 interrupted_stream_state = bookmark_state[stream]
                                 if interrupted_stream_state["currently_syncing"] == rec_repl_key:
                                     continue
                                 interrupted_bmk = interrupted_stream_state[rec_repl_key]
-                                self.assertGreaterEqual(rec_time, strptime_to_utc(interrupted_bmk))
+                                self.assertGreaterEqual(rec_time, self.strptime_to_utc(interrupted_bmk))
                         else:
-                            interrupted_bmk = strptime_to_utc(bookmark_state[stream][replication_key])
+                            interrupted_bmk = self.strptime_to_utc(bookmark_state[stream][replication_key])
                             for record in interrupted_records:
-                                rec_time = strptime_to_utc(record.get(replication_key))
-                                self.assertGreaterEqual(rec_time, strptime_to_utc(interrupted_bmk))
+                                rec_time = self.strptime_to_utc(record.get(replication_key))
+                                self.assertGreaterEqual(rec_time, self.strptime_to_utc(interrupted_bmk))
 
                             # Record count for all streams of interrupted sync match expectations
                             full_records_after_interrupted_bookmark = 0
 
                             for record in full_records:
-                                rec_time = strptime_to_utc(record.get(replication_key))
-                                if rec_time >= strptime_to_utc(interrupted_bmk):
+                                rec_time = self.strptime_to_utc(record.get(replication_key))
+                                if rec_time >= self.strptime_to_utc(interrupted_bmk):
                                     full_records_after_interrupted_bookmark += 1
 
                             self.assertEqual(

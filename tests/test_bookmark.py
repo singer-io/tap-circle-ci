@@ -5,7 +5,6 @@ from datetime import timedelta
 import dateutil.parser
 from tap_tester import connections, menagerie, runner
 from tap_tester.logger import LOGGER
-from singer.utils import strptime_to_utc
 
 
 class CircleCiBookMarkTest(CircleCiBaseTest):
@@ -102,9 +101,9 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
                 if expected_replication_method == self.INCREMENTAL:
                     # Collect information specific to incremental streams from syncs 1 & 2
                     replication_key = next(iter(expected_replication_keys[stream]))
-                    first_bmk_value = {k: strptime_to_utc(v) for k, v in first_bookmark.items()}
-                    second_bmk_value = {k: strptime_to_utc(v) for k, v in second_bookmark.items()}
-                    simulated_bmk_value = {key: strptime_to_utc(value) for key, value in new_state["bookmarks"][stream].items()}
+                    first_bmk_value = {k: self.strptime_to_utc(v) for k, v in first_bookmark.items()}
+                    second_bmk_value = {k: self.strptime_to_utc(v) for k, v in second_bookmark.items()}
+                    simulated_bmk_value = {key: self.strptime_to_utc(value) for key, value in new_state["bookmarks"][stream].items()}
 
                     # Verify the first sync sets a bookmark of the expected form
                     self.assertIsNotNone(first_bookmark)
@@ -128,7 +127,7 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
                     bookmark_record_key = bookmark_keys[stream]
                     for record in first_sync_messages:
                         try:
-                            replication_key_value = strptime_to_utc(record.get(replication_key))
+                            replication_key_value = self.strptime_to_utc(record.get(replication_key))
                             first_bookmark_value_utc_value = first_bmk_value[record[bookmark_record_key]]
 
                             # check that the bookmark value of the first sync is max value of all the records
@@ -143,7 +142,7 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
 
                     for record in second_sync_messages:
                         try:
-                            replication_key_value = strptime_to_utc(record.get(replication_key))
+                            replication_key_value = self.strptime_to_utc(record.get(replication_key))
                             second_bookmark_value_utc_value = second_bmk_value[record[bookmark_record_key]]
                             simulated_bookmark = simulated_bmk_value[record[bookmark_record_key]]
 

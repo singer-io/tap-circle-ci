@@ -314,3 +314,14 @@ class CircleCiBaseTest(unittest.TestCase):
             bookmark_state[interrupt_stream] = interrupt_stream_bookmark
             interrupted_sync_states["bookmarks"] = bookmark_state
         return interrupted_sync_states
+
+    
+    def strptime_to_utc(self,dtimestr):
+        """
+        Parse DTIME according to DATETIME_PARSE without TZ safety.
+        """
+        d_object = dateutil.parser.parse(dtimestr)
+        if d_object.tzinfo is None:
+            return d_object.replace(tzinfo=pytz.UTC)
+        else:
+            return d_object.astimezone(tz=pytz.UTC)
