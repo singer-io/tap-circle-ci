@@ -133,7 +133,7 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
 
                     first_bmk_value = {k: self.strptime_to_utc(v) for k, v in first_bookmark.items()}
                     second_bmk_value = {k: self.strptime_to_utc(v) for k, v in second_bookmark.items()}
-                    simulated_bmk_value = {k: self.strptime_to_utc(v) for k, v in simulated_bookmark}
+                    simulated_bmk_value = {k: self.strptime_to_utc(v) for k, v in simulated_bookmark.items()}
 
                     # Verify the second sync bookmark is Equal to the first sync bookmark
                     # assumes no changes to data during test
