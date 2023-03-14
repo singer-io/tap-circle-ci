@@ -88,15 +88,14 @@ class CircleCiInterruptedSyncTest(CircleCiBaseTest):
 
                     replication_key = next(iter(expected_replication_keys[stream]))
 
- 
-
                     if stream == interrupted_sync_states.get("currently_syncing", None):
                         # For interrupted stream records sync count should be less equals
                         self.assertLessEqual(
                             second_sync_count,
                             first_sync_count,
                             msg=f"For interrupted stream - {stream},\
-                                seconds sync record count should be less than or equal to first sync")
+                                seconds sync record count should be less than or equal to first sync",
+                        )
 
                         # Verify the interrupted sync replicates the expected record set
                         # All interrupted recs are in full recs
@@ -147,28 +146,31 @@ class CircleCiInterruptedSyncTest(CircleCiBaseTest):
                             second_sync_count,
                             first_sync_count,
                             msg=f"For pending sync streams - {stream},\
-                            second sync record count should be more than or equal to first sync")
+                            second sync record count should be more than or equal to first sync",
+                        )
                     else:
                         raise Exception(f"Invalid state of stream {stream} in interrupted state")
 
                 elif expected_replication_method == self.FULL_TABLE:
 
                     # Verify the syncs do not set a bookmark for full table streams
-                    self.assertEqual({},first_bookmark_value)
-                    self.assertEqual({},second_bookmark_value)
+                    self.assertEqual({}, first_bookmark_value)
+                    self.assertEqual({}, second_bookmark_value)
 
                     # Verify the interrupted sync replicates the expected record set
                     # All interrupted recs are in full recs
                     for record in interrupted_records:
-                        self.assertIn(record, full_records, msg="full-table interrupted sync record not found in full sync",)
-                    
+                        self.assertIn(
+                            record,
+                            full_records,
+                            msg="full-table interrupted sync record not found in full sync",
+                        )
+
                     # Verify at least 1 record was replicated for each stream
                     self.assertGreater(second_sync_count, 0)
 
-
                     # Verify the number of records in the second sync is the same as the first
                     self.assertEqual(second_sync_count, first_sync_count)
-
 
                 else:
                     raise NotImplementedError(

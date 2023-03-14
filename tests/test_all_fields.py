@@ -1,10 +1,7 @@
 from base import CircleCiBaseTest
 from tap_tester import connections, menagerie, runner
 
-
-KNOWN_MISSING_FIELDS = {
-    "jobs": {"approved_by",}
-}
+KNOWN_MISSING_FIELDS = {"jobs": {"approved_by"}}
 
 
 class CircleCiAllFields(CircleCiBaseTest):
@@ -67,8 +64,8 @@ class CircleCiAllFields(CircleCiBaseTest):
                     msg=f'{expected_automatic_keys - expected_all_keys} is not in "expected_all_keys"',
                 )
 
-                # check if atleast 1 record is synced
-                self.assertGreater(record_count.get(stream,0), 0)
+                # check if at least 1 record is synced
+                self.assertGreater(record_count.get(stream, 0), 0)
 
                 messages = synced_records.get(stream)
                 # Collect actual values

@@ -3,8 +3,9 @@ import enum
 import json
 from unittest import TestCase, mock
 
-import tap_circle_ci.exceptions as errors
 from requests import HTTPError, Response
+
+import tap_circle_ci.exceptions as errors
 from tap_circle_ci.client import Client
 
 

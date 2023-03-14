@@ -36,7 +36,7 @@ class CircleCiBaseTest(unittest.TestCase):
 
     def setUp(self):
         """Checking required environment variables."""
-        if os.getenv("TAP_CIRCLE_CI_ACCESS_TOKEN",None) == None:
+        if os.getenv("TAP_CIRCLE_CI_ACCESS_TOKEN", None) is None:
             raise Exception("Missing test-required environment variables")
 
     def get_type(self):
@@ -64,10 +64,10 @@ class CircleCiBaseTest(unittest.TestCase):
                 self.OBEYS_START_DATE: True,
             },
             "jobs": {
-                self.PRIMARY_KEYS: {"id","_sdc_record_hash"},
+                self.PRIMARY_KEYS: {"id", "_sdc_record_hash"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
                 self.OBEYS_START_DATE: False,
-            }
+            },
         }
 
     def expected_streams(self):
@@ -316,11 +316,8 @@ class CircleCiBaseTest(unittest.TestCase):
             interrupted_sync_states["bookmarks"] = bookmark_state
         return interrupted_sync_states
 
-    
-    def strptime_to_utc(self,dtimestr):
-        """
-        Parse DTIME according to DATETIME_PARSE without TZ safety.
-        """
+    def strptime_to_utc(self, dtimestr):
+        """Parse DTIME according to DATETIME_PARSE without TZ safety."""
         d_object = dateutil.parser.parse(dtimestr)
         if d_object.tzinfo is None:
             return d_object.replace(tzinfo=pytz.UTC)
@@ -328,10 +325,8 @@ class CircleCiBaseTest(unittest.TestCase):
             return d_object.astimezone(tz=pytz.UTC)
 
     def assertIsDateFormat(self, value, str_format):
-        """
-        Assertion Method that verifies a string value is a formatted datetime with
-        the specified format.
-        """
+        """Assertion Method that verifies a string value is a formatted
+        datetime with the specified format."""
         try:
             dt.strptime(value, str_format)
         except ValueError as err:

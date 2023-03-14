@@ -50,8 +50,8 @@ class CircleCiAutomaticFields(CircleCiBaseTest):
                 expected_keys = self.expected_automatic_fields().get(stream)
                 expected_primary_keys = self.expected_primary_keys()[stream]
 
-                # check if atleast 1 record is synced
-                self.assertGreater(record_count.get(stream,0), 0)
+                # check if at least 1 record is synced
+                self.assertGreater(record_count.get(stream, 0), 0)
 
                 # Collect actual values
                 data = synced_records.get(stream, {})
