@@ -19,7 +19,7 @@ class CircleCiBaseTest(unittest.TestCase):
 
     PRIMARY_KEYS = "table-key-properties"
     START_DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
-    BOOKMARK_COMPARISON_FORMAT = "%Y-%m-%dT%H:%M:%S.000000Z"
+    BOOKMARK_COMPARISON_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
     REPLICATION_KEYS = "valid-replication-keys"
     REPLICATION_METHOD = "forced-replication-method"
     INCREMENTAL = "INCREMENTAL"
@@ -94,6 +94,7 @@ class CircleCiBaseTest(unittest.TestCase):
         for date_format in date_formats:
             try:
                 date_stripped = dt.strptime(date_value, date_format)
+                LOGGER.info(f"AAAAAA  used format is {date_format}")
                 return date_stripped
             except ValueError:
                 continue
@@ -325,3 +326,13 @@ class CircleCiBaseTest(unittest.TestCase):
             return d_object.replace(tzinfo=pytz.UTC)
         else:
             return d_object.astimezone(tz=pytz.UTC)
+
+    def assertIsDateFormat(self, value, str_format):
+        """
+        Assertion Method that verifies a string value is a formatted datetime with
+        the specified format.
+        """
+        try:
+            dt.strptime(value, str_format)
+        except ValueError as err:
+            raise AssertionError(f"Value: {value} does not conform to expected format: {str_format}") from err

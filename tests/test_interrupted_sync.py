@@ -36,13 +36,9 @@ class CircleCiInterruptedSyncTest(CircleCiBaseTest):
         first_sync_records = runner.get_records_from_target_output()
         first_sync_bookmarks = menagerie.get_state(conn_id)
 
-        LOGGER.info(f"first_sync_record_count = {first_sync_record_count}")
-
         ##########################################################################
         # Update State Between Syncs
         ##########################################################################
-
-        LOGGER.info(f"Current Bookmark after first sync: {first_sync_bookmarks}")
 
         pending_streams = {"workflows"}
         interrupt_stream = "pipelines"
@@ -62,9 +58,7 @@ class CircleCiInterruptedSyncTest(CircleCiBaseTest):
         second_sync_records = runner.get_records_from_target_output()
 
         second_sync_bookmarks = menagerie.get_state(conn_id)
-        LOGGER.info(
-            f"second_sync_record_count = {second_sync_record_count} \n second_sync_bookmarks = {second_sync_bookmarks}"
-        )
+
         ##########################################################################
         # Test By Stream
         ##########################################################################

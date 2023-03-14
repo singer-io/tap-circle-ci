@@ -52,7 +52,16 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
         first_sync_record_count = self.run_and_verify_sync(conn_id)
         first_sync_records = runner.get_records_from_target_output()
         first_sync_bookmarks = menagerie.get_state(conn_id)
+        currently_syncing_first = first_sync_bookmarks["currently_syncing"]
+        
+        # check that the sync was not interupted
+        self.assertIsNone(currently_syncing_first, msg=f"first sync was interupted at {currently_syncing_first} stream")
 
+        for stream in expected_streams:
+            with self.subTest(stream=stream):
+                self.assertGreater(first_sync_record_count.get(stream, 0), 0,msg=f"no records replicated for {stream} in first sync")
+        
+        
         ##########################################################################
         # Update State Between Syncs
         ##########################################################################
@@ -68,6 +77,10 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
         second_sync_record_count = self.run_and_verify_sync(conn_id)
         second_sync_records = runner.get_records_from_target_output()
         second_sync_bookmarks = menagerie.get_state(conn_id)
+
+        for stream in expected_streams:
+            with self.subTest(stream=stream):
+                self.assertGreater(second_sync_record_count.get(stream, 0), 0,msg=f"No records replicated for {stream} in second sync")
 
         ##########################################################################
         # Test By Stream
@@ -85,6 +98,7 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
                 # Collect information for assertions from syncs 1 & 2 base on expected values
                 first_sync_count = first_sync_record_count.get(stream, 0)
                 second_sync_count = second_sync_record_count.get(stream, 0)
+        
                 first_sync_messages = [
                     record.get("data")
                     for record in first_sync_records.get(stream, {}).get("messages", [])
@@ -99,17 +113,23 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
                 second_bookmark = second_sync_bookmarks.get("bookmarks", {stream: None}).get(stream)
 
                 if expected_replication_method == self.INCREMENTAL:
-                    # Collect information specific to incremental streams from syncs 1 & 2
-                    replication_key = next(iter(expected_replication_keys[stream]))
-                    first_bmk_value = {k: self.strptime_to_utc(v) for k, v in first_bookmark.items()}
-                    second_bmk_value = {k: self.strptime_to_utc(v) for k, v in second_bookmark.items()}
-                    simulated_bmk_value = {key: self.strptime_to_utc(value) for key, value in new_state["bookmarks"][stream].items()}
-
                     # Verify the first sync sets a bookmark of the expected form
                     self.assertIsNotNone(first_bookmark)
 
                     # Verify the second sync sets a bookmark of the expected form
                     self.assertIsNotNone(second_bookmark)
+
+                    # Collect information specific to incremental streams from syncs 1 & 2
+                    replication_key = next(iter(expected_replication_keys[stream]))
+
+                    self.assertIsInstance(first_bookmark, dict)                   
+                    for bmk_key, bmk_value in first_bookmark.items():
+                        self.assertIsInstance(bmk_value, str)
+                        self.assertIsDateFormat(bmk_value, self.BOOKMARK_COMPARISON_FORMAT)
+
+                    first_bmk_value = {k: self.strptime_to_utc(v) for k, v in first_bookmark.items()}
+                    second_bmk_value = {k: self.strptime_to_utc(v) for k, v in second_bookmark.items()}
+                    simulated_bmk_value = {key: self.strptime_to_utc(value) for key, value in new_state["bookmarks"][stream].items()}
 
                     # Verify the second sync bookmark is Equal to the first sync bookmark
                     # assumes no changes to data during test
@@ -125,10 +145,16 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
 
 
                     bookmark_record_key = bookmark_keys[stream]
+                    records_count_gt_manipulated_bmk = 0
                     for record in first_sync_messages:
                         try:
                             replication_key_value = self.strptime_to_utc(record.get(replication_key))
                             first_bookmark_value_utc_value = first_bmk_value[record[bookmark_record_key]]
+                            simulated_bookmark = simulated_bmk_value[record[bookmark_record_key]]
+                            
+                            if replication_key_value >= simulated_bookmark:
+                                self.assertIn(record, second_sync_messages)
+                                records_count_gt_manipulated_bmk+=1
 
                             # check that the bookmark value of the first sync is max value of all the records
                             self.assertLessEqual(
@@ -137,8 +163,12 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
                                 msg="First sync bookmark was set incorrectly, \
                                                     a record with a greater replication-key value was synced.",
                             )
+
                         except KeyError:
                             LOGGER.info("Key not found in the first bookmark value %s %s", record[bookmark_keys[stream]], replication_key_value)
+                        
+                    # check if records that have a greater bookmark value than manipulated bookmark are present in second sync records
+                    self.assertEqual(records_count_gt_manipulated_bmk, second_sync_count, msg=f"record count mismatch for stream {stream}")
 
                     for record in second_sync_messages:
                         try:
@@ -170,13 +200,15 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
                     # Verify the syncs do not create bookmark for full table streams
                     self.assertEqual(first_bookmark,{})
                     self.assertEqual(second_bookmark,{})
+                   
+                    # check if all records from first sync exist in second sync
+                    for record in first_sync_messages:
+                        self.assertIn(record, second_sync_messages)
 
                     # Verify the number of records in the second sync is the same as the first
                     self.assertEqual(second_sync_count, first_sync_count)
                 else:
                     raise NotImplementedError(f"INVALID EXPECTATIONS STREAM: {stream} REPLICATION_METHOD: {expected_replication_method}")
-                # Verify at least 1 record was replicated in the second sync
-                self.assertGreater(second_sync_count, 0, msg=f"We are not fully testing bookmarking for {stream}")
 
 
 
@@ -197,9 +229,6 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
                 bmk_converted = dateutil.parser.parse(bookmark_value)
                 diff_bmk_value = bmk_converted - timedelta(**stream_timedelta[stream])
                 calculated_state_formatted = dt.strftime(diff_bmk_value, self.BOOKMARK_COMPARISON_FORMAT)
-                LOGGER.info("%s curr key %s old %s new",parent_key,bmk_converted,diff_bmk_value)
                 new_state[parent_key] = calculated_state_formatted
             diff_state[stream] = new_state
-            LOGGER.info("%s curr bmkkkkk",diff_state)
-
         return diff_state
