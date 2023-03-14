@@ -64,7 +64,7 @@ class CircleCiBaseTest(unittest.TestCase):
                 self.OBEYS_START_DATE: True,
             },
             "jobs": {
-                self.PRIMARY_KEYS: {"id", "_sdc_record_hash"},
+                self.PRIMARY_KEYS: {"id", "_workflow_id"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
                 self.OBEYS_START_DATE: False,
             },
