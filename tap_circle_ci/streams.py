@@ -5,7 +5,8 @@ import singer
 import singer.metadata as metadata_lib
 import singer.bookmarks as bookmarks
 import singer.metrics as metrics
-from tap_circle_ci.client import get_all_items
+from tap_circle_ci.client import Client
+
 
 # We leave a week offset for currently running pipelines
 TIME_BUFFER_FOR_RUNNING_PIPELINES = datetime.timedelta(days=7)
@@ -21,7 +22,7 @@ def get_bookmark(state: dict, project: str, stream_name: str, bookmark_key: str)
     return None
 
 
-def get_all_pipelines(schemas: dict, project: str, state: dict, metadata: dict) -> dict:
+def get_all_pipelines(schemas: dict, project: str, state: dict, metadata: dict, api_client :Client) -> dict:
     """
     https://circleci.com/docs/api/v2/#get-all-pipelines
     """
@@ -37,7 +38,7 @@ def get_all_pipelines(schemas: dict, project: str, state: dict, metadata: dict) 
     job_counter = metrics.record_counter('jobs') if schemas.get('jobs') else None
     extraction_time = singer.utils.now()
     extraction_time_minus_buffer = extraction_time - TIME_BUFFER_FOR_RUNNING_PIPELINES
-    for pipeline in get_all_items('pipelines', pipeline_url):
+    for pipeline in api_client.get_all_items('pipelines', pipeline_url):
 
         # We leave a buffer before extracting a pipeline as a hack to avoid extracting currently running pipelines
         if extraction_time_minus_buffer < singer.utils.strptime_to_utc(pipeline.get('updated_at')):
@@ -62,6 +63,7 @@ def get_all_pipelines(schemas: dict, project: str, state: dict, metadata: dict) 
                 project,
                 state,
                 metadata,
+                api_client,
                 workflow_counter,
                 job_counter
             )
@@ -78,8 +80,9 @@ def get_all_workflows_for_pipeline(
         project: str,
         state: dict,
         metadata: dict,
+        api_client : Client,
         workflow_counter: Optional[metrics.Counter] = None,
-        job_counter: Optional[metrics.Counter] = None
+        job_counter: Optional[metrics.Counter] = None,
     ) -> dict:
     """
     https://circleci.com/docs/api/v2/#get-a-pipeline-39-s-workflows
@@ -89,7 +92,7 @@ def get_all_workflows_for_pipeline(
 
     workflow_url = f"https://circleci.com/api/v2/pipeline/{pipeline_id}/workflow"
     extraction_time = singer.utils.now()
-    for workflow in get_all_items('workflows', workflow_url):
+    for workflow in api_client.get_all_items('workflows', workflow_url):
 
         # transform and write
         with singer.Transformer() as transformer:
@@ -99,7 +102,7 @@ def get_all_workflows_for_pipeline(
 
         # If jobs are selected, grab all the jobs for this workflow
         if schemas.get('jobs'):
-            state = get_all_jobs_for_workflow(schemas, pipeline_id, workflow.get("id"), project, state, metadata, job_counter)
+            state = get_all_jobs_for_workflow(schemas, pipeline_id, workflow.get("id"), project, state, metadata, api_client, job_counter)
 
     return state
 
@@ -111,6 +114,7 @@ def get_all_jobs_for_workflow(
         project: str,
         state: dict,
         metadata: dict,
+        api_client : Client,
         job_counter: Optional[metrics.Counter] = None
     ) -> dict:
     """
@@ -122,7 +126,7 @@ def get_all_jobs_for_workflow(
 
     job_url = f"https://circleci.com/api/v2/workflow/{workflow_id}/job"
     extraction_time = singer.utils.now()
-    for job in get_all_items('jobs', job_url):
+    for job in api_client.get_all_items('jobs', job_url):
 
         # add in workflow_id and pipeline_id
         job.update({'_pipeline_id': pipeline_id, '_workflow_id': workflow_id})
