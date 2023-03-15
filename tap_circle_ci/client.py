@@ -1,6 +1,7 @@
 from requests import Session
 import singer
 import singer.metrics as metrics
+from tap_circle_ci.exceptions import AuthException, NotFoundException
 
 
 _session = Session()
@@ -23,13 +24,6 @@ def add_next_page_to_url(url: str, next_page_token: str) -> str:
     Adds token to header to pull next page
     """
     return url + '?page-token=' + next_page_token
-
-
-class AuthException(Exception):
-    pass
-
-class NotFoundException(Exception):
-    pass
 
 
 def get(source: str, url: str, headers: dict={}):
