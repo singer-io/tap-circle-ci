@@ -4,7 +4,7 @@ from typing import Any, Dict, Mapping, Optional, Tuple
 import backoff
 import requests
 from requests import session
-from singer import get_logger
+from singer import get_logger, metrics
 
 from . import exceptions as errors
 
@@ -112,22 +112,3 @@ class Client:
                 return self.default_response
             return None
         return response.json()
-
-    def get_all_pages(self, source: str, url: str):
-        params = {}
-        while True:
-            data = self.get(url, params, {})
-            yield data
-            if data.get('next_page_token') is not None:
-                params["page-token"] = data.get('next_page_token')
-            else:
-                break
-
-
-    def get_all_items(self, source: str, url: str):
-        """
-        Each page contains a bunch of items, so this function extracts the items one by one
-        """
-        for page in self.get_all_pages(source, url):
-            for item in page["items"]:
-                yield item

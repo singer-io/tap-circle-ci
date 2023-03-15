@@ -17,7 +17,7 @@ def main():
     """performs sync and/or discovery."""
     args = utils.parse_args(REQUIRED_CONFIG_KEYS)
     if args.discover:
-        discover().dump()
+        discover(args.config).dump()
     else:
         sync(args.config, args.state, args.catalog or discover(args.config))
 
