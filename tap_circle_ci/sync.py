@@ -1,56 +1,14 @@
-#!/usr/bin/env python3
-import os
 from typing import List
 
-import json
 
 import singer
-from singer import utils, metadata
+from singer import metadata
 
 from tap_circle_ci.streams import (TOP_LEVEL_STREAM_ID_TO_FUNCTION,
                                                             STREAM_ID_TO_SUB_STREAM_IDS,
                                                             validate_stream_dependencies)
 from tap_circle_ci.client import add_authorization_header
-
-REQUIRED_CONFIG_KEYS = ["token", "project_slugs"]
 LOGGER = singer.get_logger()
-
-def get_abs_path(path: str) -> str:
-    return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
-
-# Load schemas from schemas folder
-def load_schemas() -> dict:
-    schemas = {}
-
-    for filename in os.listdir(get_abs_path('schemas')):
-        path = get_abs_path('schemas') + '/' + filename
-        file_raw = filename.replace('.json', '')
-        with open(path) as file:
-            schemas[file_raw] = json.load(file)
-
-    return schemas
-
-def discover() -> singer.catalog.Catalog:
-    raw_schemas = load_schemas()
-    streams = []
-
-    for schema_name, schema in raw_schemas.items():
-
-        # TODO: populate any metadata and stream's key properties here..
-        stream_metadata = []
-        stream_key_properties = []
-
-        # create and add catalog entry
-        catalog_entry = {
-            'stream': schema_name,
-            'tap_stream_id': schema_name,
-            'schema': schema,
-            'metadata' : [],
-            'key_properties': []
-        }
-        streams.append(catalog_entry)
-
-    return singer.catalog.Catalog.from_dict({'streams': streams})
 
 def get_selected_streams(catalog: singer.catalog.Catalog) -> list:
     '''
@@ -140,26 +98,3 @@ def sync_single_project(project: str, state: dict, catalog: singer.catalog.Catal
                 # sync stream and it's sub streams
                 state = sync_func(stream_schemas, project, state, all_metadata)
                 singer.write_state(state)
-
-
-@utils.handle_top_exception(LOGGER)
-def main():
-
-    # Parse command line arguments
-    args = utils.parse_args(REQUIRED_CONFIG_KEYS)
-
-    # If discover flag was passed, run discovery mode and dump output to stdout
-    if args.discover:
-        catalog = discover()
-        print(json.dumps(catalog.to_dict(), indent=2))
-    # Otherwise run in sync mode
-    else:
-        if args.catalog:
-            catalog = args.catalog
-        else:
-            catalog =  discover()
-
-        sync(args.config, args.state, catalog)
-
-if __name__ == "__main__":
-    main()
