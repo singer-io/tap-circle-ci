@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=E1121
 """tap-circle-ci module."""
 import sys
 
@@ -24,4 +25,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
