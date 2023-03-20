@@ -2,7 +2,7 @@ from typing import List
 import singer
 from singer import metadata
 from tap_circle_ci import streams
-from tap_circle_ci.client import add_authorization_header
+from tap_circle_ci.client import Client
 
 LOGGER = singer.get_logger()
 
@@ -45,13 +45,13 @@ def sync(config: dict, state: dict, catalog: dict) -> None:
     Syncs all projects
     """
     projects = list(filter(None, config['project_slugs'].split(' ')))
-    add_authorization_header(config['token'])
+    api_client = Client(config)
     for project in projects:
         LOGGER.info(f'Syncing project {project}')
-        sync_single_project(project, state, catalog)
+        sync_single_project(project, state, catalog, api_client)
 
 
-def sync_single_project(project: str, state: dict, catalog: singer.catalog.Catalog) -> None:
+def sync_single_project(project: str, state: dict, catalog: singer.catalog.Catalog, api_client :Client) -> None:
     """
     Sync a single project's streams
     """
@@ -92,5 +92,5 @@ def sync_single_project(project: str, state: dict, catalog: singer.catalog.Catal
                                                 sub_stream.key_properties)
 
                 # sync stream and it's sub streams
-                state = sync_func(stream_schemas, project, state, all_metadata)
+                state = sync_func(stream_schemas, project, state, all_metadata, api_client)
                 singer.write_state(state)
