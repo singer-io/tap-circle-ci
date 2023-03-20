@@ -22,7 +22,7 @@ class Jobs(FullTableStream):
 
     stream = "jobs"
     tap_stream_id = "jobs"
-    key_properties = ["id"]
+    key_properties = ["id","_workflow_id"]
     url_endpoint = "https://circleci.com/api/v2/workflow/WORKFLOW_ID/job"
     project = None
 
