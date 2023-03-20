@@ -3,10 +3,10 @@ from setuptools import find_packages, setup
 
 setup(
     name="tap-circle-ci",
-    version="0.1.2",
+    version="1.0.0",
     description="Singer.io tap for extracting data from circle ci",
-    author="Sisu Data",
-    url="http://sisu.ai",
+    author="Sisu Data;Stitch",
+    url="http://sisu.ai https://singer.io",
     classifiers=["Programming Language :: Python :: 3 :: Only"],
     py_modules=["tap_circle_ci"],
     install_requires=[
