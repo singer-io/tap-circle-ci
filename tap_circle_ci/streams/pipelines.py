@@ -54,7 +54,7 @@ class Pipelines(IncrementalStream):
                     record_timestamp = strptime_to_utc(record[self.replication_key])
                 except IndexError as err:
                     LOGGER.error("Unable to process Record, Exception occurred: %s for stream %s", err, self.__class__)
-                    continue
+                    raise err
                 if record_timestamp >= current_bookmark_date_utc:
                     transformed_record = transformer.transform(record, schema, stream_metadata)
                     write_record(self.tap_stream_id, transformed_record)
