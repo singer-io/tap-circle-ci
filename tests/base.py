@@ -94,7 +94,6 @@ class CircleCiBaseTest(unittest.TestCase):
         for date_format in date_formats:
             try:
                 date_stripped = dt.strptime(date_value, date_format)
-                LOGGER.info(f"AAAAAA  used format is {date_format}")
                 return date_stripped
             except ValueError:
                 continue
