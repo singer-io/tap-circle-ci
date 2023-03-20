@@ -23,6 +23,56 @@
         "integer"
       ]
     },
+    "errors":{
+      "type": [
+        "null",
+        "array"
+      ],
+      "items": {
+        "type": [
+          "null",
+          "object"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "description":"The type of error"
+          },
+          "message": {
+            "type": "string",
+            "description":"A human-readable error message."
+          }
+        }
+      }
+    },
+    "trigger_parameters":{
+      "type": [
+        "null",
+        "object"
+      ],
+      "properties": {
+        "property_name":{
+          "anyOf":[
+            {
+              "type": "null"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
     "state": {
       "type": [
         "null",

@@ -90,6 +90,12 @@
         "string"
       ],
       "format": "date-time"
+    },
+    "approval_request_id": {
+      "type": [
+        "null",
+        "string"
+      ]
     }
   }
 }
