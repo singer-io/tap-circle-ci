@@ -3,20 +3,22 @@ from typing import Dict
 
 import singer
 
-from . import streams
+from tap_circle_ci.client import Client
+from tap_circle_ci.streams import STREAMS
 
 LOGGER = singer.get_logger()
 
 
-def sync(client, catalog: singer.Catalog, state: Dict):
+def sync(config :dict, state: Dict, catalog: singer.Catalog):
     """performs sync for selected streams."""
+    client = Client(config)
     projects = list(filter(None, client.config["project_slugs"].split(" ")))
     with singer.Transformer() as transformer:
         for stream in catalog.get_selected_streams(state):
             tap_stream_id = stream.tap_stream_id
             stream_schema = stream.schema.to_dict()
             stream_metadata = singer.metadata.to_map(stream.metadata)
-            stream_obj = streams.STREAMS[tap_stream_id](client)
+            stream_obj = STREAMS[tap_stream_id](client)
             LOGGER.info("Starting sync for stream: %s", tap_stream_id)
             state = singer.set_currently_syncing(state, tap_stream_id)
             singer.write_state(state)

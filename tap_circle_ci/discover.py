@@ -12,6 +12,7 @@ from tap_circle_ci.streams import STREAMS
 def discover(config: Dict = None):
     """Performs Discovery for tap-circle-ci."""
     if config:
+        # permission/auth check
         client = Client(config)
         client.get("https://circleci.com/api/v2/me", {}, {})
     streams = []

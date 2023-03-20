@@ -4,11 +4,11 @@ from typing import Any, Dict, Mapping, Optional, Tuple
 import backoff
 import requests
 from requests import session
-from singer import get_logger, metrics
+from singer import get_logger
 
 from . import exceptions as errors
 
-LOGGER = get_logger()
+logger = get_logger()
 
 
 def raise_for_error(response: requests.Response) -> None:
@@ -47,9 +47,6 @@ class Client:
         self.config = config
         self._session = session()
         self._circle_token = self.config.get("token")
-        self.req_counter: metrics.Counter = None
-        self.req_timer: metrics.Timer = None
-
         self.shared_pipeline_ids = None
         self.shared_workflow_ids = None
 
@@ -100,20 +97,18 @@ class Client:
             Dict,List,None: Returns a `Json Parsed` HTTP Response or None if exception
         """
         response = self._session.request(method, endpoint, **kwargs)
-        if self.req_counter:
-            self.req_counter.increment()
         if response.status_code != 200:
             try:
-                LOGGER.error("Status: %s Message: %s", response.status_code, response.text)
+                logger.error("Status: %s Message: %s", response.status_code, response.text)
             except AttributeError:
                 pass
             try:
                 raise_for_error(response)
             except errors.Http401RequestError as err:
-                LOGGER.info("Authorization Failure, attempting to regenrate token")
+                logger.info("Authorization Failure, attempting to regenrate token")
                 raise err
             except errors.Http404RequestError:
-                LOGGER.error("Resource Not Found %s", response.url or "")
+                logger.error("Resource Not Found %s", response.url or "")
                 return self.default_response
             return None
         return response.json()

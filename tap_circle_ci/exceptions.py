@@ -1,6 +1,5 @@
 """tap-circle-ci exception classes module."""
 
-
 class ClientError(Exception):
     """class representing Generic Http error."""
 
