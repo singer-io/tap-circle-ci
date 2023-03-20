@@ -4,7 +4,7 @@ from typing import Any, Dict, Mapping, Optional, Tuple
 import backoff
 import requests
 from requests import session
-from singer import get_logger, metrics
+from singer import get_logger
 
 from . import exceptions as errors
 
