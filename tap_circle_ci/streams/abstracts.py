@@ -17,6 +17,13 @@ from singer.utils import strftime, strptime_to_utc
 LOGGER = get_logger()
 
 
+def normalize_schema(schema: dict) -> dict:
+    if isinstance(schema.get("type"), list) and "object" in schema["type"]:
+        schema["type"] = "object"
+    if "properties" not in schema:
+        schema["properties"] = {}
+    return schema
+
 class BaseStream(ABC):
     """
     A Base Class providing structure and boilerplate for generic streams
@@ -104,8 +111,11 @@ class BaseStream(ABC):
     def __init__(self, client=None) -> None:
         self.client = client
 
+
     @classmethod
     def get_metadata(cls, schema) -> Dict[str, str]:
+        schema = normalize_schema(schema)
+
         """Returns a `dict` for generating stream metadata."""
         stream_metadata = get_standard_metadata(
             **{
