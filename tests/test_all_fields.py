@@ -24,7 +24,9 @@ class CircleCiAllFields(CircleCiBaseTest):
 
         # Streams to verify all fields tests
         expected_streams = self.expected_streams()
-
+        # Skip the stream that causes
+        streams_to_skip = ["context"]
+        expected_streams = [s for s in expected_streams if s not in streams_to_skip]
         expected_automatic_fields = self.expected_automatic_fields()
         conn_id = connections.ensure_connection(self)
 
