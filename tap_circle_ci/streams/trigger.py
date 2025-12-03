@@ -48,6 +48,7 @@ class Trigger(FullTableStream):
                 for item in items:
                     item["_project_id"] = project_id
                     item["_pipeline_definition_id"] = pipeline_definition_id
+                    item["id"] = item.get("id", None)
 
                 all_records.extend(items)
 
