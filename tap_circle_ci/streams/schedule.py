@@ -18,8 +18,8 @@ class Schedule(IncrementalStream):
     stream = "schedule"
     tap_stream_id = "schedule"
     key_properties = ["id"]
-    replication_key = "updated_at"
-    valid_replication_keys = ["updated_at"]
+    replication_key = "updated-at"
+    valid_replication_keys = ["updated-at"]
 
     # Hardcoded URL — you can replace org/repo using config.json later
     url_endpoint = "https://circleci.com/api/v2/project/gh/singer-io/singer-python/schedule"
