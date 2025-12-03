@@ -123,7 +123,7 @@ class Client:
             return response
         if response.status_code != 200:
             try:
-                logger.error("Status: %s Message: %s", response.status_code, response.text)
+                logger.error("Status : %s Message: %s", response.status_code, response.text)
             except AttributeError:
                 pass
             try:
