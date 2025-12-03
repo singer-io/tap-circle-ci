@@ -3,10 +3,11 @@ from typing import Any, Dict, Mapping, Optional, Tuple
 
 import backoff
 import requests
-from requests import session
+from requests import session, Response
 from singer import get_logger
 
 from . import exceptions as errors
+from .streams.deploy import LOGGER
 
 logger = get_logger()
 
@@ -55,6 +56,27 @@ class Client:
         headers.update({"Circle-Token": self._circle_token})
         return headers, params
 
+    def get_org_id(self):
+        url = "https://circleci.com/api/v2/organization"
+        headers, params = self.authenticate({}, {})
+        response = self.__make_request(
+            "POST",
+            url,
+            headers=headers,
+            params=params,
+            json={
+                "name": "singer-io",
+                "vcs_type": "github"
+            }
+        )
+        if not response:
+            raise Exception("CircleCI returned empty response for organization API")
+        org_id = response.json().get("id")
+        if not org_id:
+            raise Exception("Unable to fetch org_id from CircleCI API")
+
+        return org_id
+
     @backoff.on_exception(wait_gen=backoff.expo, exception=(errors.Http401RequestError,), jitter=None, max_tries=1)
     def get(self, endpoint: str, params: Dict, headers: Dict) -> Any:
         """Calls the make_request method with a prefixed method type `GET`"""
@@ -83,7 +105,7 @@ class Client:
     @backoff.on_exception(
         wait_gen=backoff.expo, exception=errors.Http429RequestError, jitter=None, max_time=60, max_tries=6
     )
-    def __make_request(self, method: str, endpoint: str, **kwargs) -> Optional[Mapping[Any, Any]]:
+    def __make_request(self, method: str, endpoint: str, **kwargs) -> Response | dict[str, list[Any]] | None | Any:
         """
         Performs HTTP Operations
         Args:
@@ -97,6 +119,8 @@ class Client:
             Dict,List,None: Returns a `Json Parsed` HTTP Response or None if exception
         """
         response = self._session.request(method, endpoint, **kwargs)
+        if response.status_code == 201:
+            return response
         if response.status_code != 200:
             try:
                 logger.error("Status: %s Message: %s", response.status_code, response.text)

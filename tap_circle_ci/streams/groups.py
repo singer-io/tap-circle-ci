@@ -22,7 +22,7 @@ class Groups(FullTableStream):
     project = None
 
     def get_url_endpoint(self) -> str:
-        org_id = self.client.config.get("org_id")
+        org_id = self.client.get_org_id()
         if not org_id:
             raise Exception("Missing 'org_id' in config.json")
         return self.url_endpoint.format(org_id=org_id)

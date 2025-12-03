@@ -27,7 +27,7 @@ class Deploy(IncrementalStream):
     project = None
 
     def get_url(self) -> str:
-        org_id = self.client.config.get("org_id")
+        org_id = self.client.get_org_id()
         page_size = self.client.config.get("page_size", 200)
         if not org_id:
             raise Exception("Missing 'org_id' in config.json")

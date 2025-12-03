@@ -20,7 +20,7 @@ class Project(FullTableStream):
     url_endpoint = "https://circleci.com/api/private/project?organization-id={org_id}"
 
     def get_records(self) -> list:
-        org_id = self.client.config.get("org_id")
+        org_id = self.client.get_org_id()
         url = self.url_endpoint.format(org_id=org_id)
         all_records = []
         params = {}
