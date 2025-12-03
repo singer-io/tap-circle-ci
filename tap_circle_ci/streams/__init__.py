@@ -6,7 +6,6 @@ from .workflows import Workflows
 from .context import Context
 from .deploy import Deploy
 from .groups import Groups
-from .policy_management import PolicyManagement
 from .pipeline_definition import PipelineDefinition
 from .project import Project
 from .schedule import Schedule
@@ -19,7 +18,6 @@ STREAMS = {
     Context.tap_stream_id: Context,
     Deploy.tap_stream_id: Deploy,
     Groups.tap_stream_id: Groups,
-    PolicyManagement.tap_stream_id: PolicyManagement,
     PipelineDefinition.tap_stream_id: PipelineDefinition,
     Project.tap_stream_id: Project,
     Schedule.tap_stream_id: Schedule,
