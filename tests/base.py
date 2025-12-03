@@ -77,7 +77,7 @@ class CircleCiBaseTest(unittest.TestCase):
             "deploy": {
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {"created_at"},
+                self.REPLICATION_KEYS: {"updated_at"},
                 self.OBEYS_START_DATE: True,
             },
             "groups": {
@@ -100,7 +100,7 @@ class CircleCiBaseTest(unittest.TestCase):
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.OBEYS_START_DATE: True,
-                self.REPLICATION_KEYS: {"created-at"},
+                self.REPLICATION_KEYS: {"updated-at"},
             },
             "trigger": {
                 self.PRIMARY_KEYS: {"id"},
