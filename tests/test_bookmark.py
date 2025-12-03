@@ -31,10 +31,7 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
             different values for the replication key
         """
 
-        expected_streams = self.expected_streams()
-        # Skip the stream that causes
-        streams_to_skip = ["context"]
-        expected_streams = [s for s in expected_streams if s not in streams_to_skip]
+        expected_streams = self.expected_streams() - {"context"}
         expected_replication_keys = self.expected_replication_keys()
         expected_replication_methods = self.expected_replication_method()
 

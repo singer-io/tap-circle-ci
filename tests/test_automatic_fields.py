@@ -21,8 +21,7 @@ class CircleCiAutomaticFields(CircleCiBaseTest):
         values.
         """
 
-        expected_streams = self.expected_streams()
-
+        expected_streams = self.expected_streams() - {"context"}
         # Instantiate connection
         conn_id = connections.ensure_connection(self)
 

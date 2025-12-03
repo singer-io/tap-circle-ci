@@ -29,9 +29,7 @@ class CircleCiDiscoveryTest(CircleCiBaseTest):
         - Verify that all fields have inclusion of available metadata.
         - Verify all streams have inclusion of automatic
         """
-        streams_to_test = self.expected_streams()
-        streams_to_skip = ["context"]
-        streams_to_test = [s for s in streams_to_test if s not in streams_to_skip]
+        streams_to_test = self.expected_streams() - {"context"}
         conn_id = connections.ensure_connection(self)
 
         found_catalogs = self.run_and_verify_check_mode(conn_id)
