@@ -19,12 +19,6 @@
         "null",
         "string"
       ]
-    },
-    "_workflow_id": {
-      "type": [
-        "null",
-        "string"
-      ]
     }
   }
 }

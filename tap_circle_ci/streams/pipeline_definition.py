@@ -39,6 +39,8 @@ class PipelineDefinition(FullTableStream):
         parent_ids = self.get_parent_ids(state)
         for project_id in parent_ids:
             records = self.get_records_for_project(project_id)
+            for record in records:
+                record["project_id"] = project_id
             all_records.extend(records)
         return all_records
 
