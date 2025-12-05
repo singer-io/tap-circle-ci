@@ -11,6 +11,13 @@ This tap:
   - [Pipelines](https://circleci.com/docs/api/v2/#get-all-pipelines)
   - [Workflows](https://circleci.com/docs/api/v2/#get-a-pipeline-39-s-workflows)
   - [Jobs](https://circleci.com/docs/api/v2/#get-a-workflow-39-s-jobs)
+  - [Context](https://circleci.com/docs/api/v2/#tag/Context)
+  - [Deploy](https://circleci.com/docs/api/v2/#tag/Deploy)
+  - [Groups](https://circleci.com/docs/api/v2/#tag/Groups)
+  - [Pipeline-Definition](https://circleci.com/docs/api/v2/#tag/Pipeline-Definition)
+  - [Project](https://circleci.com/docs/api/v2/#tag/Project)
+  - [Schedule](https://circleci.com/docs/api/v2/#tag/Schedule)
+  - [Trigger](https://circleci.com/docs/api/v2/#tag/Trigger)
 - Outputs the schema for each resource
 - Incrementally pulls data based on the input state
 
