@@ -18,6 +18,7 @@ This tap:
   - [Project](https://circleci.com/docs/api/v2/#tag/Project)
   - [Schedule](https://circleci.com/docs/api/v2/#tag/Schedule)
   - [Trigger](https://circleci.com/docs/api/v2/#tag/Trigger)
+  - [Collaborations](https://circleci.com/docs/api/v2/#tag/User/operation/getCollaborations)
 - Outputs the schema for each resource
 - Incrementally pulls data based on the input state
 

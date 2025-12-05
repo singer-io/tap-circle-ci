@@ -9,25 +9,38 @@ from tap_circle_ci.streams import STREAMS
 LOGGER = singer.get_logger()
 
 
-def sync(config :dict, state: Dict, catalog: singer.Catalog):
-    """performs sync for selected streams."""
+def sync(config: dict, state: Dict, catalog: singer.Catalog):
+    """Performs sync for selected streams, ensuring Collaborations runs first."""
     client = Client(config)
     projects = list(filter(None, client.config["project_slugs"].split(" ")))
+
     with singer.Transformer() as transformer:
-        for stream in catalog.get_selected_streams(state):
+        # Get selected streams and sort to run Collaborations first
+        selected_streams = catalog.get_selected_streams(state)
+        parent_first = sorted(
+            selected_streams,
+            key=lambda s: 0 if s.tap_stream_id == "collaborations" else 1
+        )
+
+        for stream in parent_first:
             tap_stream_id = stream.tap_stream_id
             stream_schema = stream.schema.to_dict()
             stream_metadata = singer.metadata.to_map(stream.metadata)
             stream_obj = STREAMS[tap_stream_id](client)
+
             LOGGER.info("Starting sync for stream: %s", tap_stream_id)
             state = singer.set_currently_syncing(state, tap_stream_id)
             singer.write_state(state)
             singer.write_schema(tap_stream_id, stream_schema, stream_obj.key_properties, stream.replication_key)
+
             for project in projects:
                 stream_obj.project = project
                 LOGGER.info("Starting sync for project: %s", project)
                 state = stream_obj.sync(
-                    state=state, schema=stream_schema, stream_metadata=stream_metadata, transformer=transformer
+                    state=state,
+                    schema=stream_schema,
+                    stream_metadata=stream_metadata,
+                    transformer=transformer
                 )
             singer.write_state(state)
 

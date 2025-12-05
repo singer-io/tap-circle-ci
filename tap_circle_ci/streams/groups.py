@@ -12,41 +12,57 @@ from .abstracts import FullTableStream
 
 LOGGER = get_logger()
 
+
 class Groups(FullTableStream):
-    """Stream class for CircleCI Groups."""
+    """Full-table Groups stream (child of Collaborations)."""
 
     stream = "groups"
     tap_stream_id = "groups"
     key_properties = ["id"]
     url_endpoint = "https://circleci.com/api/v2/organizations/{org_id}/groups"
     project = None
+    parent_stream = "collaborations"
 
-    def get_url_endpoint(self) -> str:
-        org_id = self.client.get_org_id()
-        if not org_id:
-            raise Exception("Missing 'org_id' in config.json")
+    def get_org_ids(self):
+        """Fetch org IDs from the parent Collaborations stream."""
+        if not hasattr(self.client, "shared_collaborations_ids"):
+            raise Exception(
+                "Collaborations data not available yet. Make sure Collaborations sync runs first."
+            )
+        return self.client.shared_collaborations_ids.get(self.parent_stream, [])
+
+    def get_url(self, org_id: str) -> str:
+        """Build API endpoint URL for a given org_id."""
         return self.url_endpoint.format(org_id=org_id)
 
     def get_records(self) -> Iterator[Dict]:
-        url = self.get_url_endpoint()
+        org_ids = self.get_org_ids()  # get from parent Collaborations
         params = {}
 
-        with metrics.Counter("page_count") as page_counter:
-            while True:
-                response = self.client.get(url, params, {})
-                page_counter.increment()
-                items = response.get("items", [])
-                next_page_token = response.get("next_page_token")
-                for record in items:
-                    yield record
-                if not next_page_token:
-                    break
-                params["page-token"] = next_page_token
+        with metrics.Counter("page_count") as counter:
+            for org_id in org_ids:
+                url = self.url_endpoint.format(org_id=org_id)
+                while True:
+                    response = self.client.get(url, params, {})
+                    counter.increment()
+                    items = response.get("items", [])
+                    next_page_token = response.get("next_page_token")
+                    if not items:
+                        break
+                    for record in items:
+                        record["org_id"] = org_id  # Add org_id here
+                        yield record
+                    if not next_page_token:
+                        break
+                    params["page-token"] = next_page_token
 
     def sync(self, state: Dict, schema: Dict, stream_metadata: Dict, transformer: Transformer) -> Dict:
+        """Perform sync for the Groups stream."""
+        LOGGER.info("Starting Groups full-table sync")
         with metrics.record_counter(self.tap_stream_id) as counter:
             for record in self.get_records():
                 transformed = transformer.transform(record, schema, stream_metadata)
                 write_record(self.tap_stream_id, transformed)
                 counter.increment()
+        LOGGER.info("Completed Groups full-table sync")
         return state

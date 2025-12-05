@@ -11,7 +11,7 @@ class CircleCiInterruptedSyncTest(CircleCiBaseTest):
         return "tap_tester_circleci_interrupt_test"
 
     def test_run(self):
-        expected_streams = self.expected_streams() - {"context"}
+        expected_streams = self.expected_streams() - {"context"} #Skipping context stream as we do nott have permission
         expected_replication_keys = self.expected_replication_keys()
         expected_replication_methods = self.expected_replication_method()
         LOGGER.info(

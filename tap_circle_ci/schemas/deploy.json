@@ -20,6 +20,12 @@
         "string"
       ]
     },
+    "org_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
     "created_at": {
       "type": [
         "null",

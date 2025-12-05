@@ -31,7 +31,7 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
             different values for the replication key
         """
 
-        expected_streams = self.expected_streams() - {"context"}
+        expected_streams = self.expected_streams() - {"context"} #Skipping context stream as we do nott have permission
         expected_replication_keys = self.expected_replication_keys()
         expected_replication_methods = self.expected_replication_method()
 

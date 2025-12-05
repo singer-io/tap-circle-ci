@@ -8,7 +8,19 @@
         "string"
       ]
     },
+    "vcs-type": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
     "name": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "avatar_url": {
       "type": [
         "null",
         "string"
@@ -19,19 +31,6 @@
         "null",
         "string"
       ]
-    },
-    "org_id": {
-      "type": [
-        "null",
-        "string"
-      ]
-    },
-    "last_build_finished_at": {
-      "type": [
-        "null",
-        "string"
-      ],
-      "format": "date-time"
     }
   }
 }

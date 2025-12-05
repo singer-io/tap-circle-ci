@@ -55,23 +55,6 @@ class Client:
         headers.update({"Circle-Token": self._circle_token})
         return headers, params
 
-    def get_org_id(self):
-        url = "https://circleci.com/api/v2/me/collaborations"
-        headers, params = self.authenticate({}, {})
-        response = self.__make_request("GET", url, headers=headers, params=params)
-        if not response:
-            raise Exception("CircleCI returned empty response for collaborations API")
-        if not isinstance(response, list):
-            raise Exception(f"Unexpected response format: {response}")
-        if len(response) == 0:
-            raise Exception("No organizations found for this CircleCI token")
-        org = response[0]
-        org_id = org.get("id")
-
-        if not org_id:
-            raise Exception("Unable to extract org_id from response")
-        return org_id
-
     @backoff.on_exception(wait_gen=backoff.expo, exception=(errors.Http401RequestError,), jitter=None, max_tries=1)
     def get(self, endpoint: str, params: Dict, headers: Dict) -> Any:
         """Calls the make_request method with a prefixed method type `GET`"""

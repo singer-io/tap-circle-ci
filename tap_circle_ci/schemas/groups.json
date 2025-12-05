@@ -19,6 +19,12 @@
         "null",
         "string"
       ]
+    },
+    "org_id": {
+      "type": [
+        "null",
+        "string"
+      ]
     }
   }
 }
