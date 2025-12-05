@@ -56,7 +56,7 @@ class CircleCiAllFields(CircleCiBaseTest):
 
         for stream in expected_streams:
             with self.subTest(stream=stream):
-                # Skip streams with no data
+                # Skip the "context" stream because it does not produce records and its inclusion causes test failures.
                 if record_count.get(stream, 0) == 0:
                     continue
                 # Expected values

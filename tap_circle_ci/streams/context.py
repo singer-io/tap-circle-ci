@@ -1,4 +1,4 @@
-"""tap-circle-ci product-reviews stream module."""
+"""tap-circle-ci context stream module."""
 from typing import Dict, Iterator, List
 from singer.utils import strftime, strptime_to_utc
 
@@ -19,7 +19,7 @@ LOGGER = get_logger()
 
 
 class Context(FullTableStream):
-    """class for jobs stream."""
+    """Full-table stream for CircleCI contexts."""
 
     stream = "context"
     tap_stream_id = "context"
@@ -39,7 +39,7 @@ class Context(FullTableStream):
             while True:
                 response = self.client.get(extraction_url, params, {})
                 page_counter.increment()
-                next_page_token = response["next_page_token"]
+                next_page_token = response.get("next_page_token")
                 raw_records = response.get("items", [])
                 if not raw_records:
                     break

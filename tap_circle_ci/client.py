@@ -7,7 +7,6 @@ from requests import session, Response
 from singer import get_logger
 
 from . import exceptions as errors
-from .streams.deploy import LOGGER
 
 logger = get_logger()
 

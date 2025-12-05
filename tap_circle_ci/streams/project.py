@@ -38,9 +38,6 @@ class Project(FullTableStream):
         LOGGER.info("Starting Project full-table sync")
 
         records = self.get_records()
-
-        LOGGER.info("Found {} records".format(records))
-
         with metrics.Timer(self.tap_stream_id, None):
             with metrics.Counter(self.tap_stream_id) as counter:
                 for record in records:
