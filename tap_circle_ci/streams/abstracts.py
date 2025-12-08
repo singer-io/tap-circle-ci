@@ -131,6 +131,10 @@ class BaseStream(ABC):
                 "replication_method": cls.replication_method or cls.forced_replication_method,
             }
         )
+        # Add parent stream only if present
+        if getattr(cls, "parent_stream", None):
+            stream_metadata[0]["metadata"]["parent-tap-stream-id"] = cls.parent_stream
+
         stream_metadata = to_map(stream_metadata)
         if cls.valid_replication_keys is not None:
             for key in cls.valid_replication_keys:

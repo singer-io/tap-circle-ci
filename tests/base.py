@@ -73,6 +73,7 @@ class CircleCiBaseTest(unittest.TestCase):
                 self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
                 self.OBEYS_START_DATE: False,
+                self.PARENT_TAP_STREAM_ID: "collaborations",
             },
             "deploy": {
                 self.PRIMARY_KEYS: {"id"},
@@ -104,6 +105,7 @@ class CircleCiBaseTest(unittest.TestCase):
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.OBEYS_START_DATE: True,
                 self.REPLICATION_KEYS: {"updated-at"},
+                self.PARENT_TAP_STREAM_ID: "project",
             },
             "trigger": {
                 self.PRIMARY_KEYS: {"id"},
