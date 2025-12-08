@@ -229,7 +229,7 @@ class FullTableStream(BaseStream):
         return write_bookmark(state, self.tap_stream_id, key, value)
 
     def get_org_ids(self):
-        pass
+        return []
 
     def get_url(self, org_id):
-        pass
+        return ""
