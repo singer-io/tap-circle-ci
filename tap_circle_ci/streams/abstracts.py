@@ -18,6 +18,12 @@ LOGGER = get_logger()
 
 
 def normalize_schema(schema: dict) -> dict:
+    """
+    Ensure the schema has a consistent structure.
+    - If the 'type' field is a list containing 'object', convert it to 'object'.
+    - If 'properties' is missing, add an empty properties dict.
+    This prevents errors during schema validation and record transformation.
+    """
     if isinstance(schema.get("type"), list) and "object" in schema["type"]:
         schema["type"] = "object"
     if "properties" not in schema:

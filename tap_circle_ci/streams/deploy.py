@@ -44,7 +44,7 @@ class Deploy(IncrementalStream):
                     if not items:
                         break
                     for record in items:
-                        record["org_id"] = org_id
+                        record["organization_id"] = org_id
                         yield record
                     if not next_page_token:
                         break
@@ -52,10 +52,10 @@ class Deploy(IncrementalStream):
 
     def sync(self, state: Dict, schema: Dict, stream_metadata: Dict, transformer: Transformer) -> Dict:
         LOGGER.info("Starting Deploy incremental sync")
-        current_bookmark = self.get_bookmark(state)  # could be False if first run
+        current_bookmark = self.get_bookmark(state)
         max_bookmark = current_bookmark
 
-        def parse_dt(v):
+        def parse_datetime(v):
             return datetime.fromisoformat(v.replace("Z", "+00:00"))
 
         with metrics.record_counter(self.tap_stream_id) as counter:
@@ -67,7 +67,7 @@ class Deploy(IncrementalStream):
                     is_new_record = True
                 else:
                     try:
-                        is_new_record = parse_dt(record_bookmark_val) > parse_dt(current_bookmark)
+                        is_new_record = parse_datetime(record_bookmark_val) > parse_datetime(current_bookmark)
                     except Exception as e:
                         LOGGER.warning(
                             f"Failed to compare bookmark: {record_bookmark_val} vs {current_bookmark}. Error: {e}"

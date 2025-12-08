@@ -4,12 +4,9 @@ from singer.utils import strftime, strptime_to_utc
 
 from singer import (
     Transformer,
-    clear_bookmark,
-    get_bookmark,
     get_logger,
     metrics,
     write_record,
-    write_state,
 )
 
 from .abstracts import FullTableStream

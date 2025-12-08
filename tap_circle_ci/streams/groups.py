@@ -50,7 +50,7 @@ class Groups(FullTableStream):
                     if not items:
                         break
                     for record in items:
-                        record["org_id"] = org_id
+                        record["organization_id"] = org_id
                         yield record
                     if not next_page_token:
                         break

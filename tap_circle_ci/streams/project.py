@@ -33,7 +33,7 @@ class Project(FullTableStream):
                 response = self.client.get(url, params, {})
                 items = response.get("items", [])
                 for item in items:
-                    item["org_id"] = org_id
+                    item["organization_id"] = org_id
                 all_records.extend(items)
                 next_token = response.get("next_page_token")
                 if not next_token:

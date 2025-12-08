@@ -20,7 +20,7 @@
         "string"
       ]
     },
-    "org_id": {
+    "organization_id": {
       "type": [
         "null",
         "string"

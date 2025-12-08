@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.0
+## 1.1.0
 * Added New stream into the tap [#19](https://github.com/singer-io/tap-circle-ci/pull/19)
 
 ## 1.0.0
