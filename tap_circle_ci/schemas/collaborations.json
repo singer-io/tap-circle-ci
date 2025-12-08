@@ -8,7 +8,7 @@
         "string"
       ]
     },
-    "vcs-type": {
+    "vcs_type": {
       "type": [
         "null",
         "string"
