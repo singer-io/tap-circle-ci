@@ -22,7 +22,8 @@ def sync(config: dict, state: Dict, catalog: singer.Catalog):
 
     with singer.Transformer() as transformer:
         selected_streams = catalog.get_selected_streams(state)
-        ordered_streams = sorted(selected_streams,key=lambda s: PRIORITY.get(s.tap_stream_id, 999))
+        ordered_streams = sorted(selected_streams,key=lambda s: PRIORITY.get(s.tap_stream_id, float("inf")))
+
         for stream in ordered_streams:
             tap_stream_id = stream.tap_stream_id
             stream_schema = stream.schema.to_dict()
