@@ -19,7 +19,7 @@ class Groups(FullTableStream):
     stream = "groups"
     tap_stream_id = "groups"
     key_properties = ["id"]
-    url_endpoint = "https://circleci.com/api/v2/organizations/{org_id}/groups"
+    url_endpoint = "https://circleci.com/api/v2/organizations/{organization_id}/groups"
     project = None
     parent_stream = "collaborations"
 
@@ -31,9 +31,9 @@ class Groups(FullTableStream):
             )
         return self.client.shared_collaborations_ids.get(self.parent_stream, [])
 
-    def get_url(self, org_id: str) -> str:
+    def get_url(self, organization_id: str) -> str:
         """Build API endpoint URL for a given org_id."""
-        return self.url_endpoint.format(org_id=org_id)
+        return self.url_endpoint.format(organization_id=organization_id)
 
     def get_records(self) -> Iterator[Dict]:
         org_ids = self.get_org_ids()

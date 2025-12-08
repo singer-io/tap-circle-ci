@@ -14,7 +14,7 @@ class Deploy(IncrementalStream):
     key_properties = ["id"]
     replication_key = "updated_at"
     valid_replication_keys = ["updated_at"]
-    url_endpoint = "https://circleci.com/api/v2/deploy/environments?org-id={org_id}&page-size={page_size}"
+    url_endpoint = "https://circleci.com/api/v2/deploy/environments?org-id={organization_id}&page-size={page_size}"
     project = None
     parent_stream = "collaborations"
 
@@ -26,9 +26,9 @@ class Deploy(IncrementalStream):
             )
         return self.client.shared_collaborations_ids.get("collaborations", [])
 
-    def get_url(self, org_id: str) -> str:
+    def get_url(self, organization_id: str) -> str:
         page_size = self.client.config.get("page_size", 200)
-        return self.url_endpoint.format(org_id=org_id, page_size=page_size)
+        return self.url_endpoint.format(organization_id=organization_id, page_size=page_size)
 
     def get_records(self) -> Iterator[Dict]:
         org_ids = self.get_org_ids()

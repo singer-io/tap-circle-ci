@@ -11,7 +11,7 @@ class Project(FullTableStream):
     stream = "project"
     tap_stream_id = "project"
     key_properties = ["id"]
-    url_endpoint = "https://circleci.com/api/private/project?organization-id={org_id}"
+    url_endpoint = "https://circleci.com/api/private/project?organization-id={organization_id}"
     parent_stream = "collaborations"
 
     def get_org_ids(self) -> List[str]:
@@ -22,9 +22,9 @@ class Project(FullTableStream):
             )
         return self.client.shared_collaborations_ids.get(self.parent_stream, [])
 
-    def get_url(self, org_id: str) -> str:
+    def get_url(self, organization_id: str) -> str:
         """Build the URL for each org."""
-        return self.url_endpoint.format(org_id=org_id)
+        return self.url_endpoint.format(organization_id=organization_id)
 
     def get_records(self) -> Iterator[Dict]:
         """Fetch all project records for each org (supports pagination)."""

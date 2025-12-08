@@ -12,7 +12,7 @@ class Context(FullTableStream):
     stream = "context"
     tap_stream_id = "context"
     key_properties = ["id"]
-    url_endpoint = "https://circleci.com/api/v2/context?owner-id={org_id}&owner-type=organization"
+    url_endpoint = "https://circleci.com/api/v2/context?owner-id={organization_id}&owner-type=organization"
     project = None
     parent_stream = "collaborations"
 
@@ -24,9 +24,9 @@ class Context(FullTableStream):
             )
         return self.client.shared_collaborations_ids.get("collaborations", [])
 
-    def get_url(self, org_id: str) -> str:
+    def get_url(self, organization_id: str) -> str:
         """Return the URL for the given org."""
-        return self.url_endpoint.format(org_id=org_id)
+        return self.url_endpoint.format(organization_id=organization_id)
 
     def get_records(self) -> Iterator[Dict]:
         org_ids = self.get_org_ids()
