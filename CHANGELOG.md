@@ -1,4 +1,7 @@
 # Changelog
+## 1.1.0
+* Library version Upgrade [#20](https://github.com/singer-io/tap-circle-ci/pull/20)
+
 ## 1.0.0
 * TDL-22064 add integration tests [#10](https://github.com/singer-io/tap-circle-ci/pull/10)
 * Fix Catalog/Stream Metadata issues [#13](https://github.com/singer-io/tap-circle-ci/pull/13)

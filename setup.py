@@ -3,15 +3,15 @@ from setuptools import find_packages, setup
 
 setup(
     name="tap-circle-ci",
-    version="1.0.0",
+    version="1.1.0",
     description="Singer.io tap for extracting data from circle ci",
     author="Sisu Data;Stitch",
     url="http://sisu.ai https://singer.io",
     classifiers=["Programming Language :: Python :: 3 :: Only"],
     py_modules=["tap_circle_ci"],
     install_requires=[
-        "singer-python==5.13.0",
-        "requests",
+        "singer-python==6.3.0",
+        "requests==2.32.5",
     ],
     extras_require={"dev": ["pylint"]},
     entry_points="""
