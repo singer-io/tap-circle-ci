@@ -23,8 +23,10 @@ class CircleCiStartDateTest(CircleCiBaseTest):
         self.start_date_2 = "2022-06-20T00:00:00Z"
 
         self.start_date = self.start_date_1
-
-        expected_streams = self.expected_streams() - {"context"} #Skipping context stream as we do nott have permission
+        streams_to_exclude = {
+            "context",  # Skipping context stream as we do not have permission
+        }
+        expected_streams = self.expected_streams() - streams_to_exclude
 
         ##########################################################################
         # First Sync

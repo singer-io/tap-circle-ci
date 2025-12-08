@@ -23,7 +23,10 @@ class CircleCiAllFields(CircleCiBaseTest):
         """
 
         # Streams to verify all fields tests
-        expected_streams = self.expected_streams() - {"context"}  #Skipping context stream as we do nott have permission
+        streams_to_exclude = {
+            "context",  # Skipping context stream as we do not have permission
+        }
+        expected_streams = self.expected_streams() - streams_to_exclude
         expected_automatic_fields = self.expected_automatic_fields()
         conn_id = connections.ensure_connection(self)
 
