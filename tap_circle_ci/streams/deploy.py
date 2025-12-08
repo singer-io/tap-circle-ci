@@ -31,32 +31,38 @@ class Deploy(IncrementalStream):
         return self.url_endpoint.format(org_id=org_id, page_size=page_size)
 
     def get_records(self) -> Iterator[Dict]:
-        org_ids = self.get_org_ids()  # get from parent Collaborations
-        params = {}
+        org_ids = self.get_org_ids()
         with metrics.Counter("page_count") as counter:
             for org_id in org_ids:
                 url = self.get_url(org_id)
-                while True:
+                # ---- First page ----
+                params = {}  # reset params for every org
+                response = self.client.get(url, params, {})
+                counter.increment()
+                items = response.get("items", [])
+                next_page_token = response.get("next_page_token")
+                for record in items:
+                    record["organization_id"] = org_id
+                    yield record
+                # ---- Subsequent pages ----
+                while next_page_token:
+                    params = {"page-token": next_page_token}  # new dict each loop
                     response = self.client.get(url, params, {})
                     counter.increment()
                     items = response.get("items", [])
                     next_page_token = response.get("next_page_token")
-                    if not items:
-                        break
                     for record in items:
                         record["organization_id"] = org_id
                         yield record
-                    if not next_page_token:
-                        break
-                    params["page-token"] = next_page_token
 
     def sync(self, state: Dict, schema: Dict, stream_metadata: Dict, transformer: Transformer) -> Dict:
         LOGGER.info("Starting Deploy incremental sync")
+
         current_bookmark = self.get_bookmark(state)
         max_bookmark = current_bookmark
 
-        def parse_datetime(v):
-            return datetime.fromisoformat(v.replace("Z", "+00:00"))
+        def parse_datetime(value: str):
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
         with metrics.record_counter(self.tap_stream_id) as counter:
             for record in self.get_records():
@@ -77,12 +83,11 @@ class Deploy(IncrementalStream):
                     transformed = transformer.transform(record, schema, stream_metadata)
                     write_record(self.tap_stream_id, transformed)
                     counter.increment()
-                    if not max_bookmark or parse_dt(record_bookmark_val) > parse_dt(max_bookmark):
+                    if not max_bookmark or parse_datetime(record_bookmark_val) > parse_datetime(max_bookmark):
                         max_bookmark = record_bookmark_val
 
         if max_bookmark:
             state = self.write_bookmark(state, None, max_bookmark)
             LOGGER.info("Updated deploy bookmark to: %s", max_bookmark)
 
-        LOGGER.info("Completed Deploy incremental sync")
         return state

@@ -25,6 +25,9 @@ class CircleCiAllFields(CircleCiBaseTest):
         # Streams to verify all fields tests
         streams_to_exclude = {
             "context",  # Skipping context stream as we do not have permission
+            "trigger",  # there is No Data.
+            "schedule",  # there is No Data.
+            "pipeline_definition",  # there is No Data.
         }
         expected_streams = self.expected_streams() - streams_to_exclude
         expected_automatic_fields = self.expected_automatic_fields()
@@ -59,9 +62,6 @@ class CircleCiAllFields(CircleCiBaseTest):
 
         for stream in expected_streams:
             with self.subTest(stream=stream):
-                # Skip the "context" stream because it does not produce records and its inclusion causes test failures.
-                if record_count.get(stream, 0) == 0:
-                    continue
                 # Expected values
                 expected_all_keys = stream_to_all_catalog_fields[stream] - KNOWN_MISSING_FIELDS.get(stream, set())
                 expected_automatic_keys = expected_automatic_fields.get(stream, set())

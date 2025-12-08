@@ -13,6 +13,9 @@ class CircleCiInterruptedSyncTest(CircleCiBaseTest):
     def test_run(self):
         streams_to_exclude = {
             "context",  # Skipping context stream as we do not have permission
+            "trigger",  # there is No Data.
+            "schedule",  # there is No Data.
+            "pipeline_definition",  # there is No Data.
         }
         expected_streams = self.expected_streams() - streams_to_exclude
         expected_replication_keys = self.expected_replication_keys()
@@ -75,11 +78,6 @@ class CircleCiInterruptedSyncTest(CircleCiBaseTest):
                 # Collect information for assertions from syncs 1 & 2 base on expected values
                 first_sync_count = first_sync_record_count.get(stream, 0)
                 second_sync_count = second_sync_record_count.get(stream, 0)
-
-                # Skip streams with no data
-                if first_sync_count == 0 and second_sync_count == 0:
-                    LOGGER.warning(f"No data for stream {stream}, skipping interrupted sync checks")
-                    continue
 
                 # Gather results
                 full_records = [message["data"] for message in first_sync_records[stream]["messages"]]
@@ -174,13 +172,6 @@ class CircleCiInterruptedSyncTest(CircleCiBaseTest):
                             full_records,
                             msg="full-table interrupted sync record not found in full sync",
                         )
-
-                    # Only assert greater than 0 if there are records
-                    if second_sync_count > 0:
-                        self.assertGreater(second_sync_count, 0)
-                    else:
-                        LOGGER.warning(f"No records found for FULL_TABLE stream {stream}, skipping count assertion")
-
                     # Verify at least 1 record was replicated for each stream
                     self.assertGreater(second_sync_count, 0)
 

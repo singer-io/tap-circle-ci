@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import Dict, Iterator, List
 from singer import metrics, write_record, get_logger
 from .abstracts import FullTableStream
 
@@ -22,40 +22,49 @@ class Project(FullTableStream):
             )
         return self.client.shared_collaborations_ids.get(self.parent_stream, [])
 
-    def get_records(self) -> list:
-        org_ids = self.get_org_ids()  # get from parent Collaborations
-        all_records = []
-        params = {}
+    def get_url(self, org_id: str) -> str:
+        """Build the URL for each org."""
+        return self.url_endpoint.format(org_id=org_id)
 
-        for org_id in org_ids:
-            url = self.url_endpoint.format(org_id=org_id)
-            while True:
+    def get_records(self) -> Iterator[Dict]:
+        """Fetch all project records for each org (supports pagination)."""
+        org_ids = self.get_org_ids()
+        with metrics.Counter("page_count") as counter:
+            for org_id in org_ids:
+                url = self.get_url(org_id)
+                # ---- First page ----
+                params = {}
                 response = self.client.get(url, params, {})
+                counter.increment()
                 items = response.get("items", [])
+                next_page_token = response.get("next_page_token")
+
                 for item in items:
                     item["organization_id"] = org_id
-                all_records.extend(items)
-                next_token = response.get("next_page_token")
-                if not next_token:
-                    break
-                params["page-token"] = next_token
-
-        return all_records
+                    yield item
+                # ---- Subsequent pages ----
+                while next_page_token:
+                    params = {"page-token": next_page_token}
+                    response = self.client.get(url, params, {})
+                    counter.increment()
+                    items = response.get("items", [])
+                    next_page_token = response.get("next_page_token")
+                    for item in items:
+                        item["organization_id"] = org_id
+                        yield item
 
     def sync(self, state, schema, stream_metadata, transformer):
-        LOGGER.info("Starting Project full-table sync")
-        records = self.get_records()
-
+        all_records = []
         with metrics.Timer(self.tap_stream_id, None):
             with metrics.Counter(self.tap_stream_id) as counter:
-                for record in records:
+                for record in self.get_records():
                     transformed = transformer.transform(record, schema, stream_metadata)
                     write_record(self.tap_stream_id, transformed)
+                    all_records.append({"id": record["id"], "slug": record["slug"]})
                     counter.increment()
 
-        project_ids = [r["id"] for r in records if "id" in r]
+        # Store both id and slug for other streams to use
         if not hasattr(self.client, "shared_project_ids"):
             self.client.shared_project_ids = {}
-        self.client.shared_project_ids[self.tap_stream_id] = project_ids
-
+        self.client.shared_project_ids[self.tap_stream_id] = all_records
         return state

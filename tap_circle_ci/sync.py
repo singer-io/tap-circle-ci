@@ -1,6 +1,5 @@
 """tap-circle-ci sync."""
 from typing import Dict
-
 import singer
 
 from tap_circle_ci.client import Client
@@ -10,19 +9,21 @@ LOGGER = singer.get_logger()
 
 
 def sync(config: dict, state: Dict, catalog: singer.Catalog):
-    """Performs sync for selected streams, ensuring Collaborations runs first."""
+    """Performs sync for selected streams with proper dependency ordering."""
     client = Client(config)
     projects = list(filter(None, client.config["project_slugs"].split(" ")))
 
-    with singer.Transformer() as transformer:
-        # Get selected streams and sort to run Collaborations first
-        selected_streams = catalog.get_selected_streams(state)
-        parent_first = sorted(
-            selected_streams,
-            key=lambda s: 0 if s.tap_stream_id == "collaborations" else 1
-        )
+    # Stream execution priority
+    PRIORITY = {
+        "collaborations": 0,         # must run first
+        "project": 1,
+        "pipeline_definition": 2
+    }
 
-        for stream in parent_first:
+    with singer.Transformer() as transformer:
+        selected_streams = catalog.get_selected_streams(state)
+        ordered_streams = sorted(selected_streams,key=lambda s: PRIORITY.get(s.tap_stream_id, 999))
+        for stream in ordered_streams:
             tap_stream_id = stream.tap_stream_id
             stream_schema = stream.schema.to_dict()
             stream_metadata = singer.metadata.to_map(stream.metadata)
@@ -31,17 +32,25 @@ def sync(config: dict, state: Dict, catalog: singer.Catalog):
             LOGGER.info("Starting sync for stream: %s", tap_stream_id)
             state = singer.set_currently_syncing(state, tap_stream_id)
             singer.write_state(state)
-            singer.write_schema(tap_stream_id, stream_schema, stream_obj.key_properties, stream.replication_key)
+
+            singer.write_schema(
+                tap_stream_id,
+                stream_schema,
+                stream_obj.key_properties,
+                stream.replication_key,
+            )
 
             for project in projects:
                 stream_obj.project = project
+
                 LOGGER.info("Starting sync for project: %s", project)
                 state = stream_obj.sync(
                     state=state,
                     schema=stream_schema,
                     stream_metadata=stream_metadata,
-                    transformer=transformer
+                    transformer=transformer,
                 )
+
             singer.write_state(state)
 
     state = singer.set_currently_syncing(state, None)

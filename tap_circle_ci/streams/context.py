@@ -1,16 +1,7 @@
 """tap-circle-ci context stream module."""
-from typing import Dict, Iterator, List
-from singer.utils import strftime, strptime_to_utc
-
-from singer import (
-    Transformer,
-    get_logger,
-    metrics,
-    write_record,
-)
-
+from typing import Dict, Iterator
+from singer import Transformer, get_logger, metrics, write_record
 from .abstracts import FullTableStream
-from .workflows import Workflows
 
 LOGGER = get_logger()
 
@@ -21,29 +12,46 @@ class Context(FullTableStream):
     stream = "context"
     tap_stream_id = "context"
     key_properties = ["id"]
-    url_endpoint = "https://circleci.com/api/v2/project/PROJECT_PATH/context"
+    url_endpoint = "https://circleci.com/api/v2/context?owner-id={org_id}&owner-type=organization"
     project = None
+    parent_stream = "collaborations"
 
-    def get_url_endpoint(self) -> str:
-        """Returns a formatted endpoint using the stream attributes."""
-        # return self.url_endpoint.replace("PROJECT_PATH", self.project)
-        return "https://circleci.com/api/v2/context?owner-id=358ac4ed-dd17-4991-a8e5-f99a5b3811e6&owner-type=organization"
+    def get_org_ids(self):
+        """Fetch org IDs from the Collaborations stream."""
+        if not hasattr(self.client, "shared_collaborations_ids"):
+            raise Exception(
+                "Collaborations data not available yet. Make sure Collaborations sync runs first."
+            )
+        return self.client.shared_collaborations_ids.get("collaborations", [])
+
+    def get_url(self, org_id: str) -> str:
+        """Return the URL for the given org."""
+        return self.url_endpoint.format(org_id=org_id)
 
     def get_records(self) -> Iterator[Dict]:
-        extraction_url = self.get_url_endpoint()
-        params = {}
-        with metrics.Counter("page_count") as page_counter:
-            while True:
-                response = self.client.get(extraction_url, params, {})
-                page_counter.increment()
+        org_ids = self.get_org_ids()
+        with metrics.Counter("page_count") as counter:
+            for org_id in org_ids:
+                url = self.get_url(org_id)
+                # ---- First page ----
+                params = {}  # reset params for every org
+                response = self.client.get(url, params, {})
+                counter.increment()
+                items = response.get("items", [])
                 next_page_token = response.get("next_page_token")
-                raw_records = response.get("items", [])
-                if not raw_records:
-                    break
-                params["page-token"] = next_page_token
-                yield from raw_records
-                if next_page_token is None:
-                    break
+                for record in items:
+                    record["organization_id"] = org_id
+                    yield record
+                # ---- Subsequent pages ----
+                while next_page_token:
+                    params = {"page-token": next_page_token}  # new dict each loop
+                    response = self.client.get(url, params, {})
+                    counter.increment()
+                    items = response.get("items", [])
+                    next_page_token = response.get("next_page_token")
+                    for record in items:
+                        record["organization_id"] = org_id
+                        yield record
 
     def sync(self, state: Dict, schema: Dict, stream_metadata: Dict, transformer: Transformer) -> Dict:
         """Full-table sync, no bookmarks."""

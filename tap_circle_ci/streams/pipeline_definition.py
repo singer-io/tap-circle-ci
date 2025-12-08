@@ -1,10 +1,6 @@
 """tap-circle-ci pipeline-definition stream module."""
-from singer import (
-    metrics,
-    write_record,
-    get_logger
-)
-
+from typing import Dict, Iterator, List
+from singer import metrics, write_record, get_logger
 from .abstracts import FullTableStream
 
 LOGGER = get_logger()
@@ -19,43 +15,48 @@ class PipelineDefinition(FullTableStream):
     url_endpoint = "https://circleci.com/api/v2/projects/{project_id}/pipeline-definitions"
     parent_stream = "project"
 
-    def get_parent_ids(self, state) -> list:
-        project_ids = state.get("project_ids", [])
-        if not project_ids and hasattr(self.client, "shared_project_ids"):
-            project_ids = self.client.shared_project_ids.get("project", [])
+    def get_parent_projects(self) -> List[Dict]:
+        """Fetch projects from the Project stream."""
+        if not hasattr(self.client, "shared_project_ids"):
+            raise Exception(
+                "Project data not available yet. The Project stream must sync first."
+            )
+        return self.client.shared_project_ids.get("project", [])
 
-        if not project_ids:
-            LOGGER.warning("No parent project IDs found in state for pipeline_definition stream")
-        return project_ids
+    def get_url(self, project_id: str) -> str:
+        """Construct the URL for pipeline definitions for a given project."""
+        return self.url_endpoint.format(project_id=project_id)
 
-    def get_records_for_project(self, project_id: str) -> list:
-        url = self.url_endpoint.format(project_id=project_id)
-        response = self.client.get(url, {}, {})
-        items = response.get("items", [])
-        return items
+    def get_records(self) -> Iterator[Dict]:
+        """Loop through all projects and yield pipeline definition records."""
+        projects = self.get_parent_projects()
 
-    def get_records(self, state=None) -> list:
-        all_records = []
-        parent_ids = self.get_parent_ids(state)
-        for project_id in parent_ids:
-            records = self.get_records_for_project(project_id)
-            for record in records:
-                record["project_id"] = project_id
-            all_records.extend(records)
-        return all_records
+        with metrics.Counter("page_count") as counter:
+            for project in projects:
+                project_id = project["id"]
+                url = self.get_url(project_id)
+                response = self.client.get(url, {}, {})
+                counter.increment()
+                for record in response.get("items", []):
+                    record["project_id"] = project_id
+                    yield record
 
-    def sync(self, state, schema, stream_metadata, transformer):
+    def sync(self, state: Dict, schema: Dict, stream_metadata: Dict, transformer) -> Dict:
+        """Full-table sync for pipeline definitions."""
         LOGGER.info("Starting PipelineDefinition full-table sync")
-        records = self.get_records(state)
+        records = list(self.get_records())
         with metrics.Timer(self.tap_stream_id, None):
             with metrics.Counter(self.tap_stream_id) as counter:
                 for record in records:
                     transformed = transformer.transform(record, schema, stream_metadata)
                     write_record(self.tap_stream_id, transformed)
                     counter.increment()
-        if state is None:
-            state = {}
-        pipeline_ids = [r["id"] for r in records if "id" in r]
-        state["pipeline_ids"] = pipeline_ids
+
+        # Store pipeline definition IDs for the Trigger stream
+        if not hasattr(self.client, "shared_pipeline_ids"):
+            self.client.shared_pipeline_ids = {}
+        for record in records:
+            project_id = record["project_id"]
+            self.client.shared_pipeline_ids.setdefault(project_id, []).append(record["id"])
 
         return state
