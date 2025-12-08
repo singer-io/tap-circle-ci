@@ -68,7 +68,9 @@ class Schedule(IncrementalStream):
             for record in self.get_records():
                 record_bookmark_val = record.get(self.replication_key)
                 if not record_bookmark_val:
-                    continue
+                    raise Exception(
+                        f"Record missing replication key '{self.replication_key}': {record}"
+                    )
                 if not current_bookmark:
                     is_new_record = True
                 else:
