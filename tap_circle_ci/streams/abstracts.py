@@ -1,7 +1,8 @@
 """tap-circle-ci abstract stream module."""
 #pylint: disable=W0223
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Iterator
+
 
 from singer import (
     Transformer,
@@ -29,6 +30,15 @@ def normalize_schema(schema: dict) -> dict:
     if "properties" not in schema:
         schema["properties"] = {}
     return schema
+
+def _iter_pages(get, url, token=None):
+    params = {"page-token": token} if token else {}
+    response = get(url, params, {})
+    yield response
+
+    next_token = response.get("next_page_token")
+    if next_token and next_token != token:
+        yield from _iter_pages(get, url, next_token)
 
 class BaseStream(ABC):
     """
@@ -193,6 +203,16 @@ class FullTableStream(BaseStream):
     forced_replication_method = "FULL_TABLE"
     valid_replication_keys = None
     replication_key = None
+
+    def get_records(self) -> Iterator[Dict]:
+        org_ids = self.get_org_ids()
+        for org_id in org_ids:
+            url = self.get_url(org_id)
+            for page in _iter_pages(self.client.get, url):
+                items = page.get("items", [])
+                for record in items:
+                    record["organization_id"] = org_id
+                    yield record
 
     def sync(self, state: Dict, schema: Dict, stream_metadata: Dict, transformer: Transformer) -> Dict:
         """Abstract implementation for `type: Fulltable` stream."""

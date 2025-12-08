@@ -28,31 +28,6 @@ class Context(FullTableStream):
         """Return the URL for the given org."""
         return self.url_endpoint.format(organization_id=organization_id)
 
-    def get_records(self) -> Iterator[Dict]:
-        org_ids = self.get_org_ids()
-        with metrics.Counter("page_count") as counter:
-            for org_id in org_ids:
-                url = self.get_url(org_id)
-                # ---- First page ----
-                params = {}  # reset params for every org
-                response = self.client.get(url, params, {})
-                counter.increment()
-                items = response.get("items", [])
-                next_page_token = response.get("next_page_token")
-                for record in items:
-                    record["organization_id"] = org_id
-                    yield record
-                # ---- Subsequent pages ----
-                while next_page_token:
-                    params = {"page-token": next_page_token}  # new dict each loop
-                    response = self.client.get(url, params, {})
-                    counter.increment()
-                    items = response.get("items", [])
-                    next_page_token = response.get("next_page_token")
-                    for record in items:
-                        record["organization_id"] = org_id
-                        yield record
-
     def sync(self, state: Dict, schema: Dict, stream_metadata: Dict, transformer: Transformer) -> Dict:
         """Full-table sync, no bookmarks."""
         pipeline_ids = []

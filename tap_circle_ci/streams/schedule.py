@@ -1,7 +1,7 @@
 from typing import Dict, Iterator, List
 from datetime import datetime
 from singer import Transformer, get_logger, metrics, write_record
-from .abstracts import IncrementalStream
+from .abstracts import IncrementalStream, _iter_pages
 
 LOGGER = get_logger()
 
@@ -35,23 +35,9 @@ class Schedule(IncrementalStream):
             for project in project_slugs:
                 slug = project["slug"]
                 url = self.get_url(slug)
-                # ---- First page ----
-                params = {}
-                response = self.client.get(url, params, {})
-                counter.increment()
-                items = response.get("items", [])
-                next_page_token = response.get("next_page_token")
-                for record in items:
-                    record["project_id"] = project["id"]
-                    record["project_slug"] = slug
-                    yield record
-                # ---- Subsequent pages ----
-                while next_page_token:
-                    params = {"page-token": next_page_token}
-                    response = self.client.get(url, params, {})
+                for page in _iter_pages(self.client.get, url):
                     counter.increment()
-                    items = response.get("items", [])
-                    next_page_token = response.get("next_page_token")
+                    items = page.get("items", [])
                     for record in items:
                         record["project_id"] = project["id"]
                         record["project_slug"] = slug
