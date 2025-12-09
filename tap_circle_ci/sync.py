@@ -40,19 +40,25 @@ def sync(config: dict, state: Dict, catalog: singer.Catalog):
                 stream_obj.key_properties,
                 stream.replication_key,
             )
-
-            for project in projects:
-                stream_obj.project = project
-
-                LOGGER.info("Starting sync for project: %s", project)
+            requires_project = getattr(stream_obj, "requires_project", True)
+            if requires_project:
+                for project in projects:
+                    stream_obj.project = project
+                    LOGGER.info("Starting sync for project: %s", project)
+                    state = stream_obj.sync(
+                        state=state,
+                        schema=stream_schema,
+                        stream_metadata=stream_metadata,
+                        transformer=transformer,
+                    )
+            else:
+                LOGGER.info("Running stream '%s' ", tap_stream_id)
                 state = stream_obj.sync(
                     state=state,
                     schema=stream_schema,
                     stream_metadata=stream_metadata,
                     transformer=transformer,
                 )
-
             singer.write_state(state)
-
     state = singer.set_currently_syncing(state, None)
     singer.write_state(state)

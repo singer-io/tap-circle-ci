@@ -14,6 +14,7 @@ class PipelineDefinition(FullTableStream):
     key_properties = ["id", "project_id"]
     url_endpoint = "https://circleci.com/api/v2/projects/{project_id}/pipeline-definitions"
     parent_stream = "project"
+    requires_project = False
 
     def get_parent_projects(self) -> List[Dict]:
         """Fetch projects from the Project stream."""
@@ -52,13 +53,11 @@ class PipelineDefinition(FullTableStream):
                     write_record(self.tap_stream_id, transformed)
                     counter.increment()
 
-        if self.client is not None:
-            if not hasattr(self.client, "shared_pipeline_ids") or self.client.shared_pipeline_ids is None:
-                self.client.shared_pipeline_ids = {}
-            for record in records:
-                project_id = record["project_id"]
-                self.client.shared_pipeline_ids.setdefault(project_id, []).append(record["id"])
-        else:
-            LOGGER.warning("Client is None; cannot store shared_pipeline_ids")
+        # Store pipeline definition IDs for the Trigger stream
+        if not hasattr(self.client, "shared_pipeline_ids"):
+            self.client.shared_pipeline_ids = {}
+        for record in records:
+            project_id = record["project_id"]
+            self.client.shared_pipeline_ids.setdefault(project_id, []).append(record["id"])
 
         return state

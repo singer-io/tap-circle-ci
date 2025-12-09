@@ -15,6 +15,7 @@ class Context(FullTableStream):
     url_endpoint = "https://circleci.com/api/v2/context?owner-id={organization_id}&owner-type=organization"
     project = None
     parent_stream = "collaborations"
+    requires_project = False
 
     def get_org_ids(self):
         """Fetch org IDs from the Collaborations stream."""
