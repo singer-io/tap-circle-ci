@@ -32,6 +32,11 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
         """
         streams_to_exclude = {
             "context",  # Skipping context stream as we do not have permission
+            "project",  # Full Table
+            "pipeline_definition",  # Full Table
+            "trigger",  # Full Table
+            "groups",  # Full Table
+            "collaborations",  # Full Table
         }
         expected_streams = self.expected_streams() - streams_to_exclude
         expected_replication_keys = self.expected_replication_keys()
@@ -104,7 +109,12 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
         # Test By Stream
         ##########################################################################
 
-        bookmark_keys = {"pipelines": "project_slug", "workflows": "pipeline_id"}
+        bookmark_keys = {
+            "pipelines": "project_slug",
+            "workflows": "pipeline_id",
+            "deploy": "organization_id",
+            "schedule": "project_slug",
+        }
 
         for stream in expected_streams:
             with self.subTest(stream=stream):
