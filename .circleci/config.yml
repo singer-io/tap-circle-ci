@@ -27,9 +27,10 @@ jobs:
           name: 'Unit Tests'
           command: |
             source /usr/local/share/virtualenvs/tap-circle-ci/bin/activate
-            uv pip install nose coverage
-            nosetests --with-coverage --cover-erase --cover-package=tap_circle_ci --cover-html-dir=htmlcov tests/unittests
+            uv pip install pytest coverage parameterized
+            coverage run -m pytest tests/unittests
             coverage html
+          when: always
 
       - store_test_results:
           path: test_output/report.xml
