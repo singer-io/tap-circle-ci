@@ -29,7 +29,7 @@ class Trigger(FullTableStream):
 
     def get_pipeline_definitions_for_project(self, project_id: str) -> List[str]:
         """Fetch pipeline definition IDs for a project."""
-        pipeline_map = getattr(self.client, "shared_pipeline_ids", {}) or {}
+        pipeline_map = getattr(self.client, "shared_pipeline_definition_ids", {}) or {}
         pipeline_ids = pipeline_map.get(project_id, [])
         if not pipeline_ids:
             LOGGER.info(f"No pipeline definitions found for project {project_id}")

@@ -54,10 +54,8 @@ class PipelineDefinition(FullTableStream):
                     counter.increment()
 
         # Store pipeline definition IDs for the Trigger stream
-        if not hasattr(self.client, "shared_pipeline_ids"):
-            self.client.shared_pipeline_ids = {}
+        self.client.shared_pipeline_definition_ids = getattr(self.client, "shared_pipeline_definition_ids", {}) or {}
         for record in records:
             project_id = record["project_id"]
-            self.client.shared_pipeline_ids.setdefault(project_id, []).append(record["id"])
-
+            self.client.shared_pipeline_definition_ids.setdefault(project_id, []).append(record["id"])
         return state
