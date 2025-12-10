@@ -14,7 +14,7 @@ class Schedule(IncrementalStream):
     replication_key = "updated-at"
     valid_replication_keys = ["updated-at"]
     parent_stream = "project"
-    requires_project = False
+    project = False
     url_endpoint = "https://circleci.com/api/v2/project/{project_slug}/schedule"
 
     def get_project_slugs(self) -> List[Dict]:

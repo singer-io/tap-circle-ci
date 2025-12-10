@@ -14,7 +14,7 @@ class PipelineDefinition(FullTableStream):
     key_properties = ["id", "project_id"]
     url_endpoint = "https://circleci.com/api/v2/projects/{project_id}/pipeline-definitions"
     parent_stream = "project"
-    requires_project = False
+    project = False
 
     def get_parent_projects(self) -> List[Dict]:
         """Fetch projects from the Project stream."""

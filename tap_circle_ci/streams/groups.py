@@ -20,8 +20,7 @@ class Groups(FullTableStream):
     tap_stream_id = "groups"
     key_properties = ["id"]
     url_endpoint = "https://circleci.com/api/v2/organizations/{organization_id}/groups"
-    project = None
-    requires_project = False
+    project = False
     parent_stream = "collaborations"
 
     def get_org_ids(self):

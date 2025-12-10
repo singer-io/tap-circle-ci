@@ -15,8 +15,7 @@ class Deploy(IncrementalStream):
     replication_key = "updated_at"
     valid_replication_keys = ["updated_at"]
     url_endpoint = "https://circleci.com/api/v2/deploy/environments?org-id={organization_id}&page-size={page_size}"
-    project = None
-    requires_project = False
+    project = False
     parent_stream = "collaborations"
 
     def get_org_ids(self):
