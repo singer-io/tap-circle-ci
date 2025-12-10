@@ -21,7 +21,8 @@ jobs:
           name: 'pylint'
           command: |
             source /usr/local/share/virtualenvs/tap-circle-ci/bin/activate
-            uv pylint tap_circle_ci -d C,R,W
+            uv run pylint tap_circle_ci -d C,R,W
+
       - run:
           name: 'Unit Tests'
           command: |
@@ -29,10 +30,13 @@ jobs:
             uv pip install nose coverage
             nosetests --with-coverage --cover-erase --cover-package=tap_circle_ci --cover-html-dir=htmlcov tests/unittests
             coverage html
+
       - store_test_results:
           path: test_output/report.xml
+
       - store_artifacts:
           path: htmlcov
+
       - run:
           name: 'Integration Tests'
           command: |
@@ -42,13 +46,13 @@ jobs:
             source dev_env.sh
             run-test --tap=tap-circle-ci tests
 
-
 workflows:
   version: 2
   commit:
     jobs:
       - build:
           context: circleci-user
+
   build_daily:
     triggers:
       - schedule:
