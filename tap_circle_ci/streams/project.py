@@ -13,7 +13,7 @@ class Project(FullTableStream):
     key_properties = ["id"]
     url_endpoint = "https://circleci.com/api/private/project?organization-id={organization_id}"
     parent_stream = "collaborations"
-    project = False
+    requires_project = False
 
 
     def get_org_ids(self) -> List[str]:

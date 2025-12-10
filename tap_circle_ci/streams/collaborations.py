@@ -12,7 +12,7 @@ class Collaborations(FullTableStream):
     tap_stream_id = "collaborations"
     key_properties = ["id"]
     url_endpoint = "https://circleci.com/api/v2/me/collaborations"
-    project = False
+    requires_project = False
 
     def get_records(self) -> List[Dict]:
         """Fetch all organizations/collaborations from CircleCI API."""

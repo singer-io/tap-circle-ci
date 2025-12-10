@@ -40,7 +40,7 @@ def sync(config: dict, state: Dict, catalog: singer.Catalog):
                 stream_obj.key_properties,
                 stream.replication_key,
             )
-            requires_project = getattr(stream_obj, "project", True)
+            requires_project = getattr(stream_obj, "requires_project", True)
             if requires_project:
                 for project in projects:
                     stream_obj.project = project

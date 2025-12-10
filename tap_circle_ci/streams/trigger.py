@@ -13,7 +13,7 @@ class Trigger(FullTableStream):
     tap_stream_id = "trigger"
     key_properties = ["id"]
     parent_stream = "pipeline_definition"
-    project = False
+    requires_project = False
 
     url_endpoint = (
         "https://circleci.com/api/v2/projects/{project_id}/pipeline-definitions/{pipeline_definition_id}/triggers"
