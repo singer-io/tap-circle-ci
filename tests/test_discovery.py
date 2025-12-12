@@ -30,7 +30,6 @@ class CircleCiDiscoveryTest(CircleCiBaseTest):
         - Verify all streams have inclusion of automatic
         """
         streams_to_test = self.expected_streams()
-
         conn_id = connections.ensure_connection(self)
 
         found_catalogs = self.run_and_verify_check_mode(conn_id)
