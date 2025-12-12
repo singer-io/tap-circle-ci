@@ -102,13 +102,19 @@
         "boolean"
       ]
     },
-    "_project_id": {
+    "project_id": {
       "type": [
         "null",
         "string"
       ]
     },
-    "_pipeline_definition_id": {
+    "pipeline_definition_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "organization_id": {
       "type": [
         "null",
         "string"

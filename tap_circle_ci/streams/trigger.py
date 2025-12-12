@@ -11,7 +11,7 @@ class Trigger(FullTableStream):
 
     stream = "trigger"
     tap_stream_id = "trigger"
-    key_properties = ["id"]
+    key_properties = ["id", "project_id", "pipeline_definition_id", "organization_id"]
     parent_stream = "pipeline_definition"
     requires_project = False
 
@@ -68,7 +68,8 @@ class Trigger(FullTableStream):
                     for item in items:
                         item["project_id"] = project_id
                         item["pipeline_definition_id"] = pipeline_definition_id
-                        item["id"] = item.get("id")  # ensure key_properties is always present
+                        item["organization_id"] = project.get("organization_id")
+                        item["id"] = item.get("id")
                         yield item
 
     def sync(

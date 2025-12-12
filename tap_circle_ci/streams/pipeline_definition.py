@@ -11,7 +11,7 @@ class PipelineDefinition(FullTableStream):
 
     stream = "pipeline_definition"
     tap_stream_id = "pipeline_definition"
-    key_properties = ["id", "project_id"]
+    key_properties = ["id", "project_id", "organization_id"]
     url_endpoint = "https://circleci.com/api/v2/projects/{project_id}/pipeline-definitions"
     parent_stream = "project"
     requires_project = False
@@ -35,11 +35,13 @@ class PipelineDefinition(FullTableStream):
         with metrics.Counter("page_count") as counter:
             for project in projects:
                 project_id = project["id"]
+                organization_id = project.get("organization_id")
                 url = self.get_url(project_id)
                 response = self.client.get(url, {}, {})
                 counter.increment()
                 for record in response.get("items", []):
                     record["project_id"] = project_id
+                    record["organization_id"] = organization_id
                     yield record
 
     def sync(self, state: Dict, schema: Dict, stream_metadata: Dict, transformer) -> Dict:

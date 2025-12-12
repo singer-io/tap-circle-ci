@@ -8,6 +8,9 @@
     "project_id": {
       "type": ["null", "string"]
     },
+    "organization_id": {
+      "type": ["null", "string"]
+    },
     "name": {
       "type": ["null", "string"]
     },

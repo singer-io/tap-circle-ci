@@ -10,7 +10,7 @@ class Project(FullTableStream):
 
     stream = "project"
     tap_stream_id = "project"
-    key_properties = ["id"]
+    key_properties = ["id", "organization_id"]
     url_endpoint = "https://circleci.com/api/private/project?organization-id={organization_id}"
     parent_stream = "collaborations"
     requires_project = False
@@ -52,7 +52,8 @@ class Project(FullTableStream):
                     write_record(self.tap_stream_id, transformed)
                     all_records.append({
                         "id": record.get("id"),
-                        "slug": record.get("slug")
+                        "slug": record.get("slug"),
+                        "organization_id": record.get("organization_id")
                     })
                     counter.increment()
 
