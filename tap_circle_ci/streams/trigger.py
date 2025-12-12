@@ -25,7 +25,9 @@ class Trigger(FullTableStream):
         projects = project_map.get("project", [])
         if not projects:
             LOGGER.warning("No projects found in shared_project_ids")
-        return projects
+        unique_projects = {p["id"]: p for p in projects if p.get("id")}
+        return list(unique_projects.values())
+
 
     def get_pipeline_definitions_for_project(self, project_id: str) -> List[str]:
         """Fetch pipeline definition IDs for a project."""
@@ -33,7 +35,7 @@ class Trigger(FullTableStream):
         pipeline_ids = pipeline_map.get(project_id, [])
         if not pipeline_ids:
             LOGGER.info(f"No pipeline definitions found for project {project_id}")
-        return pipeline_ids
+        return list(dict.fromkeys(pipeline_ids))
 
     def get_records(self) -> Iterator[Dict]:
         """Fetch all trigger records for each project and pipeline definition."""
