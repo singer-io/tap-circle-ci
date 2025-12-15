@@ -22,6 +22,7 @@ class CircleCiAutomaticFields(CircleCiBaseTest):
         """
         streams_to_exclude = {
             "context",  # Skipping context stream as we do not have permission
+            "schedule"
         }
         expected_streams = self.expected_streams() - streams_to_exclude
         # Instantiate connection

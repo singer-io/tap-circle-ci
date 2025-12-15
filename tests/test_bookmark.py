@@ -37,6 +37,8 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
             "trigger",  # Full Table
             "groups",  # Full Table
             "collaborations",  # Full Table
+            "deploy",  # dependency on collaboration stream which is full table,
+            "schedule",  # dependency on project stream which is full table
         }
         expected_streams = self.expected_streams() - streams_to_exclude
         expected_replication_keys = self.expected_replication_keys()
