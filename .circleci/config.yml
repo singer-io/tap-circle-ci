@@ -15,14 +15,13 @@ jobs:
       - run:
           name: 'JSON Validator'
           command: |
-            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            source /usr/local/share/virtualenvs/tap-circle-ci/bin/activate
             stitch-validate-json tap_circle_ci/schemas/*.json
       - run:
           name: 'pylint'
           command: |
             source /usr/local/share/virtualenvs/tap-circle-ci/bin/activate
-            uv pip install pylint
-            pylint tap_circle_ci -d C,R,W
+            uv run pylint tap_circle_ci -d C,R,W
       - run:
           name: 'Unit Tests'
           command: |
@@ -30,6 +29,7 @@ jobs:
             uv pip install pytest coverage parameterized
             coverage run -m pytest tests/unittests
             coverage html
+          when: always
       - store_test_results:
           path: test_output/report.xml
       - store_artifacts:
@@ -37,11 +37,11 @@ jobs:
       - run:
           name: 'Integration Tests'
           command: |
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            uv pip install --upgrade awscli
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
-            source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-circle-ci tests
-
 
 workflows:
   version: 2
@@ -49,6 +49,7 @@ workflows:
     jobs:
       - build:
           context: circleci-user
+
   build_daily:
     triggers:
       - schedule:
