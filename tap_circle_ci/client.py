@@ -97,9 +97,11 @@ class Client:
             Dict,List,None: Returns a `Json Parsed` HTTP Response or None if exception
         """
         response = self._session.request(method, endpoint, **kwargs)
+        if response.status_code == 201:
+            return response
         if response.status_code != 200:
             try:
-                logger.error("Status: %s Message: %s", response.status_code, response.text)
+                logger.error("Status : %s Message: %s", response.status_code, response.text)
             except AttributeError:
                 pass
             try:
