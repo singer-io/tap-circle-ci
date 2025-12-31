@@ -18,19 +18,6 @@ from singer.utils import strftime, strptime_to_utc
 LOGGER = get_logger()
 
 
-def normalize_schema(schema: dict) -> dict:
-    """
-    Ensure the schema has a consistent structure.
-    - If the 'type' field is a list containing 'object', convert it to 'object'.
-    - If 'properties' is missing, add an empty properties dict.
-    This prevents errors during schema validation and record transformation.
-    """
-    if isinstance(schema.get("type"), list) and "object" in schema["type"]:
-        schema["type"] = "object"
-    if "properties" not in schema:
-        schema["properties"] = {}
-    return schema
-
 def _iter_pages(get, url, token=None):
     params = {"page-token": token} if token else {}
     response = get(url, params, {})
@@ -130,8 +117,6 @@ class BaseStream(ABC):
 
     @classmethod
     def get_metadata(cls, schema) -> Dict[str, str]:
-        schema = normalize_schema(schema)
-
         """Returns a `dict` for generating stream metadata."""
         stream_metadata = get_standard_metadata(
             **{

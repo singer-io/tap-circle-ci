@@ -3,7 +3,7 @@
   "additionalProperties": false,
   "properties": {
     "id": {
-      "type": ["null", "string"]
+      "type": "string"
     },
     "project_id": {
       "type": ["null", "string"]

@@ -3,10 +3,7 @@
   "additionalProperties": false,
   "properties": {
     "id": {
-      "type": [
-        "null",
-        "string"
-      ]
+      "type": "string"
     },
     "vcs_type": {
       "type": [
