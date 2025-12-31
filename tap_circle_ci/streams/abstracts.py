@@ -1,7 +1,8 @@
 """tap-circle-ci abstract stream module."""
 #pylint: disable=W0223
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Iterator
+
 
 from singer import (
     Transformer,
@@ -16,6 +17,15 @@ from singer.utils import strftime, strptime_to_utc
 
 LOGGER = get_logger()
 
+
+def _iter_pages(get, url, token=None):
+    params = {"page-token": token} if token else {}
+    response = get(url, params, {})
+    yield response
+
+    next_token = response.get("next_page_token")
+    if next_token and next_token != token:
+        yield from _iter_pages(get, url, next_token)
 
 class BaseStream(ABC):
     """
@@ -104,6 +114,7 @@ class BaseStream(ABC):
     def __init__(self, client=None) -> None:
         self.client = client
 
+
     @classmethod
     def get_metadata(cls, schema) -> Dict[str, str]:
         """Returns a `dict` for generating stream metadata."""
@@ -115,6 +126,10 @@ class BaseStream(ABC):
                 "replication_method": cls.replication_method or cls.forced_replication_method,
             }
         )
+        # Add parent stream only if present
+        if getattr(cls, "parent_stream", None):
+            stream_metadata[0]["metadata"]["parent-tap-stream-id"] = cls.parent_stream
+
         stream_metadata = to_map(stream_metadata)
         if cls.valid_replication_keys is not None:
             for key in cls.valid_replication_keys:
@@ -174,6 +189,16 @@ class FullTableStream(BaseStream):
     valid_replication_keys = None
     replication_key = None
 
+    def get_records(self) -> Iterator[Dict]:
+        org_ids = self.get_org_ids()
+        for org_id in org_ids:
+            url = self.get_url(org_id)
+            for page in _iter_pages(self.client.get, url):
+                items = page.get("items", [])
+                for record in items:
+                    record["organization_id"] = org_id
+                    yield record
+
     def sync(self, state: Dict, schema: Dict, stream_metadata: Dict, transformer: Transformer) -> Dict:
         """Abstract implementation for `type: Fulltable` stream."""
         with metrics.record_counter(self.tap_stream_id) as counter:
@@ -187,3 +212,9 @@ class FullTableStream(BaseStream):
         """A wrapper for singer.get_bookmark to deal with compatibility for
         bookmark values or start values."""
         return write_bookmark(state, self.tap_stream_id, key, value)
+
+    def get_org_ids(self):
+        return []
+
+    def get_url(self, org_id):
+        return ""

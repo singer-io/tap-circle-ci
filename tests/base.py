@@ -25,6 +25,7 @@ class CircleCiBaseTest(unittest.TestCase):
     INCREMENTAL = "INCREMENTAL"
     FULL_TABLE = "FULL_TABLE"
     OBEYS_START_DATE = "obey-start-date"
+    PARENT_TAP_STREAM_ID = "parent-tap-stream-id"
 
     def expected_replication_method(self):
         """Return a dictionary with key of table name and value of replication
@@ -65,6 +66,55 @@ class CircleCiBaseTest(unittest.TestCase):
             },
             "jobs": {
                 self.PRIMARY_KEYS: {"id", "_workflow_id"},
+                self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.OBEYS_START_DATE: False,
+            },
+            "context": {
+                self.PRIMARY_KEYS: {"id"},
+                self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.OBEYS_START_DATE: False,
+                self.PARENT_TAP_STREAM_ID: "collaborations",
+            },
+            "deploy": {
+                self.PRIMARY_KEYS: {"id"},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {"updated_at"},
+                self.OBEYS_START_DATE: True,
+                self.PARENT_TAP_STREAM_ID: "collaborations",
+            },
+            "groups": {
+                self.PRIMARY_KEYS: {"id"},
+                self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.OBEYS_START_DATE: False,
+                self.PARENT_TAP_STREAM_ID: "collaborations",
+            },
+            "pipeline_definition": {
+                self.PRIMARY_KEYS: {"id", "project_id", "organization_id"},
+                self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.OBEYS_START_DATE: False,
+                self.PARENT_TAP_STREAM_ID: "project",
+            },
+            "project": {
+                self.PRIMARY_KEYS: {"id", "organization_id"},
+                self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.OBEYS_START_DATE: False,
+                self.PARENT_TAP_STREAM_ID: "collaborations",
+            },
+            "schedule": {
+                self.PRIMARY_KEYS: {"id"},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.OBEYS_START_DATE: True,
+                self.REPLICATION_KEYS: {"updated-at"},
+                self.PARENT_TAP_STREAM_ID: "project",
+            },
+            "trigger": {
+                self.PRIMARY_KEYS: {"id", "project_id", "pipeline_definition_id", "organization_id"},
+                self.REPLICATION_METHOD: self.FULL_TABLE,
+                self.OBEYS_START_DATE: False,
+                self.PARENT_TAP_STREAM_ID: "pipeline_definition",
+            },
+            "collaborations": {
+                self.PRIMARY_KEYS: {"id"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
                 self.OBEYS_START_DATE: False,
             },

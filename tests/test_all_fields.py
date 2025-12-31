@@ -3,7 +3,7 @@ from tap_tester import connections, menagerie, runner
 
 KNOWN_MISSING_FIELDS = {
     "pipelines": {"trigger_parameters",},
-    "workflows": {"errored_by", "tag"},
+    "workflows": {"errored_by"},
     "jobs": {"approved_by", "approval_request_id"}
     }
 
@@ -23,8 +23,13 @@ class CircleCiAllFields(CircleCiBaseTest):
         """
 
         # Streams to verify all fields tests
-        expected_streams = self.expected_streams()
-
+        streams_to_exclude = {
+            "context",  # Skipping context stream as we do not have permission
+            "trigger",  # there is No Data.
+            "schedule",  # there is No Data.
+            "pipeline_definition",  # there is No Data.
+        }
+        expected_streams = self.expected_streams() - streams_to_exclude
         expected_automatic_fields = self.expected_automatic_fields()
         conn_id = connections.ensure_connection(self)
 
@@ -57,7 +62,6 @@ class CircleCiAllFields(CircleCiBaseTest):
 
         for stream in expected_streams:
             with self.subTest(stream=stream):
-
                 # Expected values
                 expected_all_keys = stream_to_all_catalog_fields[stream] - KNOWN_MISSING_FIELDS.get(stream, set())
                 expected_automatic_keys = expected_automatic_fields.get(stream, set())
