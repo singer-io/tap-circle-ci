@@ -70,20 +70,20 @@ class CircleCiBaseTest(unittest.TestCase):
                 self.OBEYS_START_DATE: False,
             },
             "context": {
-                self.PRIMARY_KEYS: {"id"},
+                self.PRIMARY_KEYS: {"id", "organization_id"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
                 self.OBEYS_START_DATE: False,
                 self.PARENT_TAP_STREAM_ID: "collaborations",
             },
             "deploy": {
-                self.PRIMARY_KEYS: {"id"},
+                self.PRIMARY_KEYS: {"id", "organization_id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updated_at"},
                 self.OBEYS_START_DATE: True,
                 self.PARENT_TAP_STREAM_ID: "collaborations",
             },
             "groups": {
-                self.PRIMARY_KEYS: {"id"},
+                self.PRIMARY_KEYS: {"id", "organization_id"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
                 self.OBEYS_START_DATE: False,
                 self.PARENT_TAP_STREAM_ID: "collaborations",
@@ -101,7 +101,7 @@ class CircleCiBaseTest(unittest.TestCase):
                 self.PARENT_TAP_STREAM_ID: "collaborations",
             },
             "schedule": {
-                self.PRIMARY_KEYS: {"id"},
+                self.PRIMARY_KEYS: {"id", "project-slug"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.OBEYS_START_DATE: True,
                 self.REPLICATION_KEYS: {"updated-at"},

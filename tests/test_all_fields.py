@@ -24,12 +24,12 @@ class CircleCiAllFields(CircleCiBaseTest):
 
         # Streams to verify all fields tests
         streams_to_exclude = {
-            "context",  # Skipping context stream as we do not have permission
-            "trigger",  # there is No Data.
-            "schedule",  # there is No Data.
-            "pipeline_definition",  # there is No Data.
+            # "context",  # Skipping context stream as we do not have permission
+            # "trigger",  # there is No Data.
+            # "schedule",  # there is No Data.
+            # "pipeline_definition",  # there is No Data.
         }
-        expected_streams = self.expected_streams() - streams_to_exclude
+        expected_streams = self.expected_streams() - set(streams_to_exclude)
         expected_automatic_fields = self.expected_automatic_fields()
         conn_id = connections.ensure_connection(self)
 

@@ -20,7 +20,7 @@ class Groups(CollaborationMixin, FullTableStream):
 
     stream = "groups"
     tap_stream_id = "groups"
-    key_properties = ["id"]
+    key_properties = ["id", "organization_id"]
     url_endpoint = "https://circleci.com/api/v2/organizations/{organization_id}/groups"
     project = None
     requires_project = False

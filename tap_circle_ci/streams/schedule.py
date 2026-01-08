@@ -18,7 +18,7 @@ class Schedule(IncrementalStream):
     """Incremental stream for CircleCI Schedules (per project)."""
     stream = "schedule"
     tap_stream_id = "schedule"
-    key_properties = ["id"]
+    key_properties = ["id", "project-slug"]
     replication_key = "updated-at"
     valid_replication_keys = ["updated-at"]
     parent_stream = "project"

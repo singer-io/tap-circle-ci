@@ -12,16 +12,16 @@ class CircleCiInterruptedSyncTest(CircleCiBaseTest):
 
     def test_run(self):
         streams_to_exclude = {
-            "context",  # Skipping context stream as we do not have permission
-            "project",
-            "jobs",
-            "groups",
-            "trigger",  # there is No Data.
-            "schedule",  # there is No Data.
-            "pipeline_definition",  # there is No Data.
-            "deploy"
+            # "context",  # Skipping context stream as we do not have permission
+            # "project",
+            # "jobs",
+            # "groups",
+            # "trigger",  # there is No Data.
+            # "schedule",  # there is No Data.
+            # "pipeline_definition",  # there is No Data.
+            # "deploy"
         }
-        expected_streams = self.expected_streams() - streams_to_exclude
+        expected_streams = self.expected_streams() - set(streams_to_exclude)
         expected_replication_keys = self.expected_replication_keys()
         expected_replication_methods = self.expected_replication_method()
         LOGGER.info(
