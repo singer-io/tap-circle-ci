@@ -39,3 +39,21 @@ class Collaborations(FullTableStream):
         self.client.shared_collaborations_ids[self.tap_stream_id] = collab_ids
 
         return state
+
+    def prefetch_collaborations_ids(self) -> List:
+        """Helper method to load all collaboration IDs if not already cached.
+        Returns list of collaboration IDs for downstream streams.
+        """
+        if not hasattr(self.client, "shared_collaborations_ids"):
+            collaboration_ids = []
+            self.client.shared_collaborations_ids = {}
+            LOGGER.info("Fetching all collaboration records")
+            for record in self.get_records():
+                try:
+                    collaboration_ids.append(record["id"])
+                except KeyError:
+                    LOGGER.warning("Unable to find Collaboration ID")
+            collaboration_ids.sort()
+            self.client.shared_collaborations_ids[self.tap_stream_id] = collaboration_ids
+
+        return self.client.shared_collaborations_ids.get(self.tap_stream_id, [])

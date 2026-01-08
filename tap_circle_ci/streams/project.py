@@ -1,11 +1,18 @@
-from typing import Dict, Iterator, List
-from singer import metrics, write_record, get_logger
-from .abstracts import FullTableStream, _iter_pages
+from typing import Dict, Iterator, List, Tuple
+from singer import (
+    metrics,
+    write_record,
+    get_logger,
+    clear_bookmark,
+    get_bookmark,
+    write_state,
+)
+from .abstracts import FullTableStream, CollaborationMixin
 
 LOGGER = get_logger()
 
 
-class Project(FullTableStream):
+class Project(CollaborationMixin, FullTableStream):
     """Full-table Project stream (depends on Collaborations)."""
 
     stream = "project"
@@ -15,50 +22,60 @@ class Project(FullTableStream):
     parent_stream = "collaborations"
     requires_project = False
 
-
-    def get_org_ids(self) -> List[str]:
-        """Fetch org IDs from the Collaborations stream."""
-        if not hasattr(self.client, "shared_collaborations_ids"):
-            raise Exception(
-                "Collaborations data not available yet. Make sure Collaborations sync runs first."
-            )
-        return self.client.shared_collaborations_ids.get(self.parent_stream, [])
-
-    def get_url(self, organization_id: str) -> str:
-        """Build the URL for each org."""
-        return self.url_endpoint.format(organization_id=organization_id)
-
-    def get_records(self) -> Iterator[Dict]:
-        """Fetch all project records for each org (supports pagination)."""
-        org_ids = self.get_org_ids()
-
-        with metrics.Counter("page_count") as counter:
-            for org_id in org_ids:
-                url = self.get_url(org_id)
-                # Loop through all pages using the helper
-                for page in _iter_pages(self.client.get, url):
-                    counter.increment()
-                    items = page.get("items", [])
-                    for item in items:
-                        item["organization_id"] = org_id
-                        yield item
-
     def sync(self, state, schema, stream_metadata, transformer):
-        all_records = []
-        with metrics.Timer(self.tap_stream_id, None):
-            with metrics.Counter(self.tap_stream_id) as counter:
-                for record in self.get_records():
-                    transformed = transformer.transform(record, schema, stream_metadata)
-                    write_record(self.tap_stream_id, transformed)
-                    all_records.append({
-                        "id": record.get("id"),
-                        "slug": record.get("slug"),
-                        "organization_id": record.get("organization_id")
-                    })
-                    counter.increment()
-
-        # Store both id and slug for other streams to use
+        """Full-table sync with resumable state tracking."""
+        LOGGER.info("Starting Project full-table sync")
         if not hasattr(self.client, "shared_project_ids"):
             self.client.shared_project_ids = {}
+        all_records = []
+
+        with metrics.Timer(self.tap_stream_id, None):
+            collaborations, start_index = self.get_collaborations(state)
+            LOGGER.info("STARTING SYNC FROM INDEX %s", start_index)
+            collab_len = len(collaborations)
+
+            with metrics.Counter(self.tap_stream_id) as counter:
+                for index, org_id in enumerate(collaborations[start_index:], max(start_index, 1)):
+                    LOGGER.info("Syncing projects for collaboration *****%s (%s/%s)", str(org_id)[-4:], index, collab_len)
+
+                    for record in self.get_records(org_id):
+                        transformed = transformer.transform(record, schema, stream_metadata)
+                        write_record(self.tap_stream_id, transformed)
+                        all_records.append({
+                            "id": record.get("id"),
+                            "slug": record.get("slug"),
+                            "organization_id": record.get("organization_id")
+                        })
+                        counter.increment()
+
+                    state = self.write_bookmark(state, "currently_syncing", org_id)
+                    write_state(state)
+
+            state = clear_bookmark(state, self.tap_stream_id, "currently_syncing")
+
         self.client.shared_project_ids[self.tap_stream_id] = all_records
+        LOGGER.info("Completed Project full-table sync")
         return state
+
+    def prefetch_project_ids(self) -> List:
+        """Helper method to load all project IDs if not already cached.
+        Returns list of project IDs for downstream streams.
+        """
+        if not hasattr(self.client, "shared_project_ids"):
+            project_ids = []
+            if not hasattr(self.client, "shared_project_ids"):
+                self.client.shared_project_ids = {}
+            LOGGER.info("Fetching all project records")
+            org_ids = self.get_org_ids()
+            for org_id in org_ids:
+                for record in self.get_records(org_id):
+                    try:
+                        project_ids.append({
+                            "id": record.get("id"),
+                            "slug": record.get("slug"),
+                            "organization_id": record.get("organization_id")
+                        })
+                    except KeyError:
+                        LOGGER.warning("Unable to find Project ID")
+            self.client.shared_project_ids[self.tap_stream_id] = project_ids
+        return self.client.shared_project_ids.get(self.tap_stream_id, [])

@@ -1,7 +1,7 @@
 """tap-circle-ci abstract stream module."""
 #pylint: disable=W0223
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Tuple, Iterator
+from typing import Any, Dict, Tuple, Iterator, List
 
 
 from singer import (
@@ -18,15 +18,6 @@ from singer.utils import strftime, strptime_to_utc
 LOGGER = get_logger()
 
 
-def _iter_pages(get, url, token=None):
-    params = {"page-token": token} if token else {}
-    response = get(url, params, {})
-    yield response
-
-    next_token = response.get("next_page_token")
-    if next_token and next_token != token:
-        yield from _iter_pages(get, url, next_token)
-
 class BaseStream(ABC):
     """
     A Base Class providing structure and boilerplate for generic streams
@@ -37,6 +28,10 @@ class BaseStream(ABC):
      - Helper methods for catalog generation
      - `sync` and `get_records` method for performing sync
     """
+
+    def __init__(self, client=None) -> None:
+        """Initialize the BaseStream with a client."""
+        self.client = client
 
     @property
     @abstractmethod
@@ -111,9 +106,18 @@ class BaseStream(ABC):
          - https://github.com/singer-io/getting-started/blob/master/docs/SYNC_MODE.md#replication-method
         """
 
-    def __init__(self, client=None) -> None:
-        self.client = client
+    def iter_pages(self, url, token=None):
+        """Iterate through pages of a paginated API endpoint."""
+        next_token = token
+        has_more = True
 
+        while has_more:
+            params = {"page-token": next_token} if next_token else {}
+            response = self.client.get(url, params, {})
+            yield response
+
+            next_token = response.get("next_page_token")
+            has_more = next_token and next_token != params.get("page-token")
 
     @classmethod
     def get_metadata(cls, schema) -> Dict[str, str]:
@@ -189,16 +193,6 @@ class FullTableStream(BaseStream):
     valid_replication_keys = None
     replication_key = None
 
-    def get_records(self) -> Iterator[Dict]:
-        org_ids = self.get_org_ids()
-        for org_id in org_ids:
-            url = self.get_url(org_id)
-            for page in _iter_pages(self.client.get, url):
-                items = page.get("items", [])
-                for record in items:
-                    record["organization_id"] = org_id
-                    yield record
-
     def sync(self, state: Dict, schema: Dict, stream_metadata: Dict, transformer: Transformer) -> Dict:
         """Abstract implementation for `type: Fulltable` stream."""
         with metrics.record_counter(self.tap_stream_id) as counter:
@@ -213,8 +207,39 @@ class FullTableStream(BaseStream):
         bookmark values or start values."""
         return write_bookmark(state, self.tap_stream_id, key, value)
 
-    def get_org_ids(self):
-        return []
 
-    def get_url(self, org_id):
-        return ""
+class CollaborationMixin:
+    """Mixin class for streams that depend on collaborations."""
+
+    def get_org_ids(self) -> List[str]:
+        """Fetch org IDs from the Collaborations stream."""
+        from .collaborations import Collaborations
+        shared_collaborations_ids = Collaborations(self.client).prefetch_collaborations_ids()
+        return shared_collaborations_ids
+
+    def get_collaborations(self, state: Dict) -> Tuple[List, int]:
+        """Returns collaborations and index for sync resuming on interruption."""
+        shared_collaborations_ids = self.get_org_ids()
+        last_synced = get_bookmark(state, self.tap_stream_id, "currently_syncing", False)
+        last_sync_index = 0
+        if last_synced:
+            for pos, collab_id in enumerate(shared_collaborations_ids):
+                if collab_id == last_synced:
+                    LOGGER.warning("Last Sync was interrupted after collaboration *****%s", str(collab_id)[-4:])
+                    last_sync_index = pos
+                    break
+        LOGGER.info("last index for %s-collaborations %s", self.tap_stream_id, last_sync_index)
+        return shared_collaborations_ids, last_sync_index
+
+    def get_url(self, organization_id: str) -> str:
+        """Build API endpoint URL for a given org_id."""
+        return self.url_endpoint.format(organization_id=organization_id)
+
+    def get_records(self, collab_id: str) -> Iterator[Dict]:
+        """Fetch all context records for a specific collaboration"""
+        url = self.get_url(collab_id)
+        for page in self.iter_pages(url):
+            items = page.get("items", [])
+            for record in items:
+                record["organization_id"] = collab_id
+                yield record

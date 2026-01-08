@@ -17,6 +17,12 @@
         "string"
       ],
       "format": "date-time"
+    },
+    "organization_id": {
+      "type": [
+        "null",
+        "string"
+      ]
     }
   }
 }

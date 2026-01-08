@@ -1,7 +1,15 @@
-from typing import Dict, Iterator, List
+from typing import Dict, Iterator, List, Tuple
 from datetime import datetime
-from singer import Transformer, get_logger, metrics, write_record
-from .abstracts import IncrementalStream, _iter_pages
+from singer import (
+    Transformer,
+    get_logger,
+    metrics,
+    write_record,
+    clear_bookmark,
+    get_bookmark,
+    write_state,
+)
+from .abstracts import IncrementalStream
 
 LOGGER = get_logger()
 
@@ -19,61 +27,84 @@ class Schedule(IncrementalStream):
 
     def get_project_slugs(self) -> List[Dict]:
         """Fetch project slugs from Project stream."""
-        if not hasattr(self.client, "shared_project_ids"):
-            raise Exception(
-                "Project data not available yet. Make sure Project sync runs first."
-            )
-        return self.client.shared_project_ids.get("project", [])
+        from .project import Project
+        project_stream = Project(self.client)
+        return project_stream.prefetch_project_ids()
+
+    def get_projects(self, state: Dict) -> Tuple[List, int]:
+        """Returns projects and index for sync resuming on interruption."""
+        projects = self.get_project_slugs()
+        last_synced = get_bookmark(state, self.tap_stream_id, "currently_syncing", False)
+        last_sync_index = 0
+        if last_synced:
+            for pos, project in enumerate(projects):
+                if project["id"] == last_synced:
+                    LOGGER.warning("Last Sync was interrupted after project *****%s", str(project["id"])[-4:])
+                    last_sync_index = pos
+                    break
+        LOGGER.info("last index for schedule-projects %s", last_sync_index)
+        return projects, last_sync_index
 
     def get_url(self, project_slug: str) -> str:
         """Construct the schedule URL for a project."""
         return self.url_endpoint.format(project_slug=project_slug)
 
-    def get_records(self) -> Iterator[Dict]:
-        """Fetch schedule records for all projects with pagination support."""
-        project_slugs = self.get_project_slugs()
-        with metrics.Counter("page_count") as counter:
-            for project in project_slugs:
-                slug = project["slug"]
-                url = self.get_url(slug)
-                for page in _iter_pages(self.client.get, url):
-                    counter.increment()
-                    items = page.get("items", [])
-                    for record in items:
-                        record["project_id"] = project["id"]
-                        record["project_slug"] = slug
-                        yield record
+    def get_records(self, project: Dict) -> Iterator[Dict]:
+        """Fetch schedule records for a specific project or all projects with pagination support."""
+        slug = project["slug"]
+        url = self.get_url(slug)
+        for page in self.iter_pages(url):
+            items = page.get("items", [])
+            for record in items:
+                record["project_id"] = project["id"]
+                record["project_slug"] = slug
+                yield record
 
     def sync(self, state: Dict, schema: Dict, stream_metadata: Dict, transformer: Transformer) -> Dict:
         LOGGER.info("Starting Schedule incremental sync")
         current_bookmark = self.get_bookmark(state)
         max_bookmark = current_bookmark
+
         def parse_datetime(value: str):
             return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
-        with metrics.record_counter(self.tap_stream_id) as counter:
-            for record in self.get_records():
-                record_bookmark_val = record.get(self.replication_key)
-                if not record_bookmark_val:
-                    raise Exception(
-                        f"Record missing replication key '{self.replication_key}': {record}"
-                    )
-                if not current_bookmark:
-                    is_new_record = True
-                else:
-                    try:
-                        is_new_record = parse_datetime(record_bookmark_val) > parse_datetime(current_bookmark)
-                    except Exception as e:
-                        LOGGER.warning(
-                            f"Failed to compare bookmark: {record_bookmark_val} vs {current_bookmark}. Error: {e}"
-                        )
-                        is_new_record = True
-                if is_new_record:
-                    transformed = transformer.transform(record, schema, stream_metadata)
-                    write_record(self.tap_stream_id, transformed)
-                    counter.increment()
-                    if not max_bookmark or parse_datetime(record_bookmark_val) > parse_datetime(max_bookmark):
-                        max_bookmark = record_bookmark_val
+        with metrics.Timer(self.tap_stream_id, None):
+            projects, start_index = self.get_projects(state)
+            LOGGER.info("STARTING SYNC FROM INDEX %s", start_index)
+            project_len = len(projects)
+
+            with metrics.Counter(self.tap_stream_id) as counter:
+                for index, project in enumerate(projects[start_index:], max(start_index, 1)):
+                    project_id = project["id"]
+                    LOGGER.info("Syncing schedules for project *****%s (%s/%s)", str(project_id)[-4:], index, project_len)
+
+                    for record in self.get_records(project):
+                        record_bookmark_val = record.get(self.replication_key)
+                        if not record_bookmark_val:
+                            raise Exception(
+                                f"Record missing replication key '{self.replication_key}': {record}"
+                            )
+                        if not current_bookmark:
+                            is_new_record = True
+                        else:
+                            try:
+                                is_new_record = parse_datetime(record_bookmark_val) > parse_datetime(current_bookmark)
+                            except Exception as e:
+                                LOGGER.warning(
+                                    f"Failed to compare bookmark: {record_bookmark_val} vs {current_bookmark}. Error: {e}"
+                                )
+                                is_new_record = True
+                        if is_new_record:
+                            transformed = transformer.transform(record, schema, stream_metadata)
+                            write_record(self.tap_stream_id, transformed)
+                            counter.increment()
+                            if not max_bookmark or parse_datetime(record_bookmark_val) > parse_datetime(max_bookmark):
+                                max_bookmark = record_bookmark_val
+
+                    state = self.write_bookmark(state, "currently_syncing", project_id)
+                    write_state(state)
+
+            state = clear_bookmark(state, self.tap_stream_id, "currently_syncing")
 
         if max_bookmark:
             state = self.write_bookmark(state, None, max_bookmark)
