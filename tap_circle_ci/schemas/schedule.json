@@ -154,7 +154,7 @@
         "string"
       ]
     },
-    "next_page_token": {
+    "project_slug": {
       "type": [
         "null",
         "string"
