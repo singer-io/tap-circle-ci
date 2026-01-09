@@ -31,13 +31,13 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
             different values for the replication key
         """
         streams_to_exclude = {
-            "context",  # Full Table
-            "project",  # Full Table
-            "pipeline_definition",  # Full Table
-            "trigger",  # Full Table
-            "groups",  # Full Table
-            "collaborations",  # Full Table
-            "jobs",  # Full Table
+            # "context",  # Full Table
+            # "project",  # Full Table
+            # "pipeline_definition",  # Full Table
+            # "trigger",  # Full Table
+            # "groups",  # Full Table
+            # "collaborations",  # Full Table
+            # "jobs",  # Full Table
         }
         expected_streams = self.expected_streams() - set(streams_to_exclude)
         expected_replication_keys = self.expected_replication_keys()
@@ -104,8 +104,7 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
 
         bookmark_keys = {
             "pipelines": "project_slug",
-            "workflows": "pipeline_id",
-            # "deploy": "organization_id",
+            "workflows": "pipeline_id"
         }
 
         for stream in expected_streams:
@@ -162,50 +161,95 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
                         msg="second sync didn't have less records, bookmark usage not verified",
                     )
 
-                    bookmark_record_key = bookmark_keys[stream]
-                    records_count_gt_manipulated_bmk = 0
-                    for record in first_sync_messages:
-                        try:
-                            replication_key_value = self.strptime_to_utc(record.get(replication_key))
-                            first_bookmark_value_utc_value = first_bmk_value[record[bookmark_record_key]]
-                            simulated_bookmark = simulated_bmk_value[record[bookmark_record_key]]
+                    # Check if stream uses per-entity bookmarks or single bookmark
+                    if stream in bookmark_keys:
+                        # Stream uses per-entity bookmarks (pipelines, workflows)
+                        bookmark_record_key = bookmark_keys[stream]
+                        records_count_gt_manipulated_bmk = 0
+                        for record in first_sync_messages:
+                            try:
+                                replication_key_value = self.strptime_to_utc(record.get(replication_key))
+                                first_bookmark_value_utc_value = first_bmk_value[record[bookmark_record_key]]
+                                simulated_bookmark = simulated_bmk_value[record[bookmark_record_key]]
 
-                            if replication_key_value >= simulated_bookmark:
-                                self.assertIn(record, second_sync_messages)
-                                records_count_gt_manipulated_bmk += 1
+                                if replication_key_value >= simulated_bookmark:
+                                    self.assertIn(record, second_sync_messages)
+                                    records_count_gt_manipulated_bmk += 1
+
+                                # check that the bookmark value of the first sync is max value of all the records
+                                self.assertLessEqual(
+                                    replication_key_value,
+                                    first_bookmark_value_utc_value,
+                                    msg="First sync bookmark was set incorrectly, \
+                                                        a record with a greater replication-key value was synced.",
+                                )
+
+                            except KeyError:
+                                LOGGER.info(
+                                    "Key not found in the first bookmark value %s %s",
+                                    record[bookmark_keys[stream]],
+                                    replication_key_value,
+                                )
+
+                        # check if records that have a greater bookmark value than manipulated bookmark are present in second sync records
+                        self.assertEqual(
+                            records_count_gt_manipulated_bmk,
+                            second_sync_count,
+                            msg=f"record count mismatch for stream {stream}",
+                        )
+
+                        for record in second_sync_messages:
+                            try:
+                                replication_key_value = self.strptime_to_utc(record.get(replication_key))
+                                second_bookmark_value_utc_value = second_bmk_value[record[bookmark_record_key]]
+                                simulated_bookmark = simulated_bmk_value[record[bookmark_record_key]]
+
+                                # Verify the second sync bookmark value is the max replication key value for a given stream
+                                self.assertLessEqual(
+                                    replication_key_value,
+                                    second_bookmark_value_utc_value,
+                                    msg="Second sync bookmark was set incorrectly, \
+                                                        a record with a greater replication-key value was synced.",
+                                )
+
+                                # check that all records synced hold a replication key value higher than the simulated bookmark value
+                                self.assertGreaterEqual(
+                                    replication_key_value,
+                                    simulated_bookmark,
+                                    msg="Second sync records do not repeat the previous bookmark.",
+                                )
+
+                            except KeyError:
+                                LOGGER.info(
+                                    "Key not found in the second bookmark value %s %s %s",
+                                    replication_key_value,
+                                    simulated_bookmark,
+                                    second_bookmark_value_utc_value,
+                                )
+                    else:
+                        # Stream uses single bookmark (deploy, schedule) - bookmark key is replication_key
+                        first_bookmark_value = first_bmk_value[replication_key]
+                        second_bookmark_value = second_bmk_value[replication_key]
+                        simulated_bookmark_value = simulated_bmk_value[replication_key]
+
+                        for record in first_sync_messages:
+                            replication_key_value = self.strptime_to_utc(record.get(replication_key))
 
                             # check that the bookmark value of the first sync is max value of all the records
                             self.assertLessEqual(
                                 replication_key_value,
-                                first_bookmark_value_utc_value,
+                                first_bookmark_value,
                                 msg="First sync bookmark was set incorrectly, \
                                                     a record with a greater replication-key value was synced.",
                             )
 
-                        except KeyError:
-                            LOGGER.info(
-                                "Key not found in the first bookmark value %s %s",
-                                record[bookmark_keys[stream]],
-                                replication_key_value,
-                            )
-
-                    # check if records that have a greater bookmark value than manipulated bookmark are present in second sync records
-                    self.assertEqual(
-                        records_count_gt_manipulated_bmk,
-                        second_sync_count,
-                        msg=f"record count mismatch for stream {stream}",
-                    )
-
-                    for record in second_sync_messages:
-                        try:
+                        for record in second_sync_messages:
                             replication_key_value = self.strptime_to_utc(record.get(replication_key))
-                            second_bookmark_value_utc_value = second_bmk_value[record[bookmark_record_key]]
-                            simulated_bookmark = simulated_bmk_value[record[bookmark_record_key]]
 
                             # Verify the second sync bookmark value is the max replication key value for a given stream
                             self.assertLessEqual(
                                 replication_key_value,
-                                second_bookmark_value_utc_value,
+                                second_bookmark_value,
                                 msg="Second sync bookmark was set incorrectly, \
                                                     a record with a greater replication-key value was synced.",
                             )
@@ -213,23 +257,15 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
                             # check that all records synced hold a replication key value higher than the simulated bookmark value
                             self.assertGreaterEqual(
                                 replication_key_value,
-                                simulated_bookmark,
+                                simulated_bookmark_value,
                                 msg="Second sync records do not repeat the previous bookmark.",
-                            )
-
-                        except KeyError:
-                            LOGGER.info(
-                                "Key not found in the second bookmark value %s %s %s",
-                                replication_key_value,
-                                simulated_bookmark,
-                                second_bookmark_value_utc_value,
                             )
 
                 elif expected_replication_method == self.FULL_TABLE:
 
                     # Verify the syncs do not create bookmark for full table streams
-                    self.assertEqual(first_bookmark, {})
-                    self.assertEqual(second_bookmark, {})
+                    self.assertIn(first_bookmark, [{}, None])
+                    self.assertIn(second_bookmark, [{}, None])
 
                     # check if all records from first sync exist in second sync
                     for record in first_sync_messages:
