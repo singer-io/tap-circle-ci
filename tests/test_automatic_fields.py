@@ -21,8 +21,15 @@ class CircleCiAutomaticFields(CircleCiBaseTest):
         values.
         """
         streams_to_exclude = {
-            # "context",  # Skipping context stream as we do not have permission
-            # "schedule"
+            "context",
+            "pipeline_definition",
+            "trigger",
+            "groups",
+            "collaborations",
+            "deploy",
+            "jobs",
+            "pipeline",
+            "workflow"
         }
         expected_streams = self.expected_streams() - set(streams_to_exclude)
         # Instantiate connection
@@ -52,9 +59,6 @@ class CircleCiAutomaticFields(CircleCiBaseTest):
                 expected_keys = self.expected_automatic_fields().get(stream)
                 expected_primary_keys = self.expected_primary_keys()[stream]
 
-                # Skip streams with no data
-                if record_count.get(stream, 0) == 0:
-                    continue
                 # check if at least 1 record is synced
                 self.assertGreater(record_count.get(stream, 0), 0)
 

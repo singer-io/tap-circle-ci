@@ -39,6 +39,7 @@ class Project(CollaborationMixin, FullTableStream):
                     LOGGER.info("Syncing projects for collaboration *****%s (%s/%s)", str(org_id)[-4:], index, collab_len)
 
                     for record in self.get_records(org_id):
+                        LOGGER.info("Fetched record id and slug: %s, %s", record.get("id"), record.get("slug"))
                         transformed = transformer.transform(record, schema, stream_metadata)
                         write_record(self.tap_stream_id, transformed)
                         all_records.append({
