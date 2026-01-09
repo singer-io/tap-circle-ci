@@ -51,7 +51,6 @@ class Project(CollaborationMixin, FullTableStream):
                             "slug": record_slug,
                             "organization_id": record_org_id
                         })
-                        LOGGER.info(f"transformed record***: {transformed_record.get('slug')}")
                         counter.increment()
 
                     state = self.write_bookmark(state, "currently_syncing", org_id)

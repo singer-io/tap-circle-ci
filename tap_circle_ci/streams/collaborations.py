@@ -32,8 +32,7 @@ class Collaborations(FullTableStream):
                     write_record(self.tap_stream_id, transformed)
                     counter.increment()
 
-        # Store org IDs for downstream streams (like Deploy)
-        collab_ids = [r["id"] for r in records if "id" in r]
+        collab_ids = [rec["id"] for rec in records if "id" in rec]
         if not hasattr(self.client, "shared_collaborations_ids"):
             self.client.shared_collaborations_ids = {}
         self.client.shared_collaborations_ids[self.tap_stream_id] = collab_ids
