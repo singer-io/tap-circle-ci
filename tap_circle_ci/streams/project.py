@@ -40,12 +40,17 @@ class Project(CollaborationMixin, FullTableStream):
 
                     for record in self.get_records(org_id):
                         LOGGER.info("Fetched record id and slug: %s, %s", record.get("id"), record.get("slug"))
+                        # Extract values before transformation (transformer may mutate record)
+                        record_id = record.get("id")
+                        record_slug = record.get("slug")
+                        record_org_id = record.get("organization_id")
+
                         transformed_record = transformer.transform(record, schema, stream_metadata)
                         write_record(self.tap_stream_id, transformed_record)
                         all_records.append({
-                            "id": record.get("id"),
-                            "slug": record.get("slug"),
-                            "organization_id": record.get("organization_id")
+                            "id": record_id,
+                            "slug": record_slug,
+                            "organization_id": record_org_id
                         })
                         counter.increment()
 
