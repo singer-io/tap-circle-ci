@@ -39,7 +39,6 @@ class Project(CollaborationMixin, FullTableStream):
                     LOGGER.info("Syncing projects for collaboration *****%s (%s/%s)", str(org_id)[-4:], index, collab_len)
 
                     for record in self.get_records(org_id):
-                        LOGGER.info("Fetched record id and slug: %s, %s", record.get("id"), record.get("slug"))
                         # Extract values before transformation (transformer may mutate record)
                         record_id = record.get("id")
                         record_slug = record.get("slug")
@@ -52,6 +51,7 @@ class Project(CollaborationMixin, FullTableStream):
                             "slug": record_slug,
                             "organization_id": record_org_id
                         })
+                        LOGGER.info(f"transformed record***: {transformed_record.get('slug')}")
                         counter.increment()
 
                     state = self.write_bookmark(state, "currently_syncing", org_id)
@@ -59,7 +59,6 @@ class Project(CollaborationMixin, FullTableStream):
 
             state = clear_bookmark(state, self.tap_stream_id, "currently_syncing")
 
-        LOGGER.info(f"All Records ***: {all_records}")
         self.client.shared_project_ids[self.tap_stream_id] = all_records
         LOGGER.info("Completed Project full-table sync")
         return state
