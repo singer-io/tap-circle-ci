@@ -267,9 +267,25 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
                     self.assertIn(first_bookmark, [{}, None])
                     self.assertIn(second_bookmark, [{}, None])
 
-                    # check if all records from first sync exist in second sync
-                    for record in first_sync_messages:
-                        self.assertIn(record, second_sync_messages)
+                    # Get primary keys for the stream
+                    primary_keys = self.expected_primary_keys()[stream]
+
+                    # Extract primary key tuples from records
+                    first_sync_pks = {
+                        tuple(record.get(pk) for pk in primary_keys)
+                        for record in first_sync_messages
+                    }
+                    second_sync_pks = {
+                        tuple(record.get(pk) for pk in primary_keys)
+                        for record in second_sync_messages
+                    }
+
+                    # Verify all records from first sync exist in second sync (by primary key)
+                    self.assertEqual(
+                        first_sync_pks,
+                        second_sync_pks,
+                        msg="Full table sync should return same records in both syncs"
+                    )
 
                     # Verify the number of records in the second sync is the same as the first
                     self.assertEqual(second_sync_count, first_sync_count)
