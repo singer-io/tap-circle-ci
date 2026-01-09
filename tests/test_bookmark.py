@@ -30,16 +30,8 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
         For EACH stream that is incrementally replicated there are multiple rows of data with
             different values for the replication key
         """
-        streams_to_exclude = {
-            # "context",  # Full Table
-            # "project",  # Full Table
-            # "pipeline_definition",  # Full Table
-            # "trigger",  # Full Table
-            # "groups",  # Full Table
-            # "collaborations",  # Full Table
-            # "jobs",  # Full Table
-        }
-        expected_streams = self.expected_streams() - set(streams_to_exclude)
+        streams_to_exclude = set({})
+        expected_streams = self.expected_streams() - streams_to_exclude
         expected_replication_keys = self.expected_replication_keys()
         expected_replication_methods = self.expected_replication_method()
 
