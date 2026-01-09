@@ -34,7 +34,6 @@ class Schedule(IncrementalStream):
     def get_projects(self, state: Dict) -> Tuple[List, int]:
         """Returns projects and index for sync resuming on interruption."""
         projects = self.get_project_slugs()
-        LOGGER.info(f"Fetched projects: {projects}")
         last_synced = get_bookmark(state, self.tap_stream_id, "currently_syncing", False)
         last_sync_index = 0
         if last_synced:

@@ -31,14 +31,13 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
             different values for the replication key
         """
         streams_to_exclude = {
-            # "context",  # Skipping context stream as we do not have permission
-            # "project",  # Full Table
-            # "pipeline_definition",  # Full Table
-            # "trigger",  # Full Table
-            # "groups",  # Full Table
-            # "collaborations",  # Full Table
-            # "deploy",  # dependency on collaboration stream which is full table,
-            # "schedule",  # dependency on project stream which is full table
+            "context",  # Full Table
+            "project",  # Full Table
+            "pipeline_definition",  # Full Table
+            "trigger",  # Full Table
+            "groups",  # Full Table
+            "collaborations",  # Full Table
+            "jobs",  # Full Table
         }
         expected_streams = self.expected_streams() - set(streams_to_exclude)
         expected_replication_keys = self.expected_replication_keys()
@@ -71,10 +70,6 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
         for stream in expected_streams:
             with self.subTest(stream=stream):
                 first_count = first_sync_record_count.get(stream, 0)
-                if first_count == 0:
-                    LOGGER.warning(f"No records for stream {stream} in first sync, skipping bookmark tests")
-                    continue
-
                 self.assertGreater(
                     first_count, 0,
                     msg=f"no records replicated for {stream} in first sync"
@@ -98,10 +93,6 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
         for stream in expected_streams:
             with self.subTest(stream=stream):
                 second_count = second_sync_record_count.get(stream, 0)
-                if second_count == 0:
-                    LOGGER.warning(f"No records for stream {stream} in second sync, skipping bookmark tests")
-                    continue
-
                 self.assertGreater(
                     second_count, 0,
                     msg=f"No records replicated for {stream} in second sync"
@@ -114,8 +105,7 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
         bookmark_keys = {
             "pipelines": "project_slug",
             "workflows": "pipeline_id",
-            "deploy": "organization_id",
-            "schedule": "project_slug",
+            # "deploy": "organization_id",
         }
 
         for stream in expected_streams:
