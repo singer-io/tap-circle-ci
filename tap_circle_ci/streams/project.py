@@ -40,8 +40,8 @@ class Project(CollaborationMixin, FullTableStream):
 
                     for record in self.get_records(org_id):
                         LOGGER.info("Fetched record id and slug: %s, %s", record.get("id"), record.get("slug"))
-                        transformed = transformer.transform(record, schema, stream_metadata)
-                        write_record(self.tap_stream_id, transformed)
+                        transformed_record = transformer.transform(record, schema, stream_metadata)
+                        write_record(self.tap_stream_id, transformed_record)
                         all_records.append({
                             "id": record.get("id"),
                             "slug": record.get("slug"),
@@ -54,6 +54,7 @@ class Project(CollaborationMixin, FullTableStream):
 
             state = clear_bookmark(state, self.tap_stream_id, "currently_syncing")
 
+        LOGGER.info(f"All Records ***: {all_records}")
         self.client.shared_project_ids[self.tap_stream_id] = all_records
         LOGGER.info("Completed Project full-table sync")
         return state

@@ -28,8 +28,8 @@ class CircleCiAutomaticFields(CircleCiBaseTest):
             "collaborations",
             "deploy",
             "jobs",
-            "pipeline",
-            "workflow"
+            "pipelines",
+            "workflows"
         }
         expected_streams = self.expected_streams() - set(streams_to_exclude)
         # Instantiate connection
