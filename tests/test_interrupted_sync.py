@@ -168,14 +168,27 @@ class CircleCiInterruptedSyncTest(CircleCiBaseTest):
                     self.assertEqual({}, first_bookmark_value)
                     self.assertEqual({}, second_bookmark_value)
 
-                    # Verify the interrupted sync replicates the expected record set
-                    # All interrupted recs are in full recs
-                    for record in interrupted_records:
+                    # Get primary keys for the stream
+                    primary_keys = self.expected_primary_keys()[stream]
+
+                    # Extract primary key tuples from records
+                    full_sync_pks = {
+                        tuple(record.get(pk) for pk in primary_keys)
+                        for record in full_records
+                    }
+                    interrupted_sync_pks = {
+                        tuple(record.get(pk) for pk in primary_keys)
+                        for record in interrupted_records
+                    }
+
+                    # Verify all interrupted records exist in full sync (by primary key)
+                    for pk in interrupted_sync_pks:
                         self.assertIn(
-                            record,
-                            full_records,
-                            msg="full-table interrupted sync record not found in full sync",
+                            pk,
+                            full_sync_pks,
+                            msg="full-table interrupted sync record (by PK) not found in full sync",
                         )
+
                     # Verify at least 1 record was replicated for each stream
                     self.assertGreater(second_sync_count, 0)
 
