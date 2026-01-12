@@ -9,6 +9,7 @@ from singer import (
     get_bookmark,
     write_state,
 )
+from singer.utils import strptime_to_utc
 from .abstracts import IncrementalStream
 
 LOGGER = get_logger()
@@ -21,6 +22,7 @@ class Schedule(IncrementalStream):
     key_properties = ["id", "project-slug"]
     replication_key = "updated-at"
     valid_replication_keys = ["updated-at"]
+    config_start_key = "start_date"
     parent_stream = "project"
     requires_project = False
     url_endpoint = "https://circleci.com/api/v2/project/{project_slug}/schedule"
@@ -63,10 +65,7 @@ class Schedule(IncrementalStream):
     def sync(self, state: Dict, schema: Dict, stream_metadata: Dict, transformer: Transformer) -> Dict:
         LOGGER.info("Starting Schedule incremental sync")
         current_bookmark = self.get_bookmark(state)
-        max_bookmark = current_bookmark
-
-        def parse_datetime(value: str):
-            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        max_bookmark = bookmark_date_utc = strptime_to_utc(current_bookmark)
 
         with metrics.Timer(self.tap_stream_id, None):
             projects, start_index = self.get_projects(state)
@@ -84,22 +83,20 @@ class Schedule(IncrementalStream):
                             raise Exception(
                                 f"Record missing replication key '{self.replication_key}': {record}"
                             )
-                        if not current_bookmark:
-                            is_new_record = True
-                        else:
-                            try:
-                                is_new_record = parse_datetime(record_bookmark_val) > parse_datetime(current_bookmark)
-                            except Exception as e:
-                                LOGGER.warning(
-                                    f"Failed to compare bookmark: {record_bookmark_val} vs {current_bookmark}. Error: {e}"
-                                )
-                                is_new_record = True
-                        if is_new_record:
+
+                        try:
+                            record_timestamp = strptime_to_utc(record_bookmark_val)
+                        except Exception as e:
+                            LOGGER.warning(
+                                f"Failed to parse timestamp: {record_bookmark_val}. Error: {e}"
+                            )
+                            continue
+
+                        if record_timestamp >= bookmark_date_utc:
                             transformed = transformer.transform(record, schema, stream_metadata)
                             write_record(self.tap_stream_id, transformed)
                             counter.increment()
-                            if not max_bookmark or parse_datetime(record_bookmark_val) > parse_datetime(max_bookmark):
-                                max_bookmark = record_bookmark_val
+                            max_bookmark = max(max_bookmark, record_timestamp)
 
                     state = self.write_bookmark(state, "currently_syncing", project_id)
                     write_state(state)
@@ -107,7 +104,9 @@ class Schedule(IncrementalStream):
             state = clear_bookmark(state, self.tap_stream_id, "currently_syncing")
 
         if max_bookmark:
-            state = self.write_bookmark(state, None, max_bookmark)
-            LOGGER.info("Updated schedule bookmark to: %s", max_bookmark)
+            from singer.utils import strftime
+            max_bookmark_str = strftime(max_bookmark)
+            state = self.write_bookmark(state, None, max_bookmark_str)
+            LOGGER.info("Updated schedule bookmark to: %s", max_bookmark_str)
 
         return state
