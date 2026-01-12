@@ -68,7 +68,7 @@ class Trigger(FullTableStream):
         pipeline_map = pipeline_definition_stream.prefetch_pipeline_definition_ids()
         pipeline_ids = pipeline_map.get(project_id, [])
         if not pipeline_ids:
-            LOGGER.info(f"No pipeline definitions found for project {project_id}")
+            LOGGER.info("No pipeline definitions found for project %s", project_id)
         return list(dict.fromkeys(pipeline_ids))
 
     def get_records(self, project: Dict, pipeline_definition_id: str) -> Iterator[Dict]:
@@ -82,8 +82,9 @@ class Trigger(FullTableStream):
         items = response.get("items", [])
         if not items:
             LOGGER.info(
-                f"No triggers returned for pipeline_definition {pipeline_definition_id} "
-                f"of project {project_id}"
+                "No triggers returned for pipeline_definition %s of project %s",
+                pipeline_definition_id,
+                project_id
             )
         for item in items:
             item["project_id"] = project_id

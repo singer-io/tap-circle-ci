@@ -87,8 +87,8 @@ class CircleCiInterruptedSyncTest(CircleCiBaseTest):
                 full_records = [message["data"] for message in first_sync_records[stream]["messages"]]
                 interrupted_records = [message["data"] for message in second_sync_records[stream]["messages"]]
 
-                first_bookmark_value = first_sync_bookmarks["bookmarks"].setdefault(stream, {})
-                second_bookmark_value = second_sync_bookmarks["bookmarks"].setdefault(stream, {})
+                first_bookmark_value = first_sync_bookmarks["bookmarks"].get(stream, {})
+                second_bookmark_value = second_sync_bookmarks["bookmarks"].get(stream, {})
 
                 LOGGER.info(
                     f"first_bookmark_value = {first_bookmark_value} \n \

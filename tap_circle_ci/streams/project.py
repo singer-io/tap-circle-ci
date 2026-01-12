@@ -68,8 +68,7 @@ class Project(CollaborationMixin, FullTableStream):
         """
         if not hasattr(self.client, "shared_project_ids"):
             project_ids = []
-            if not hasattr(self.client, "shared_project_ids"):
-                self.client.shared_project_ids = {}
+            self.client.shared_project_ids = {}
             LOGGER.info("Fetching all project records")
             org_ids = self.get_org_ids()
             for org_id in org_ids:

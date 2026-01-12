@@ -57,9 +57,12 @@ class Deploy(CollaborationMixin, IncrementalStream):
                         else:
                             try:
                                 is_new_record = parse_datetime(record_bookmark_val) > parse_datetime(current_bookmark)
-                            except Exception as e:
+                            except Exception as err:
                                 LOGGER.warning(
-                                    f"Failed to compare bookmark: {record_bookmark_val} vs {current_bookmark}. Error: {e}"
+                                    "Failed to compare bookmark: %s vs %s. Error: %s",
+                                    record_bookmark_val,
+                                    current_bookmark,
+                                    err
                                 )
                                 is_new_record = True
                         if is_new_record:
