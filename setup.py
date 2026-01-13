@@ -10,8 +10,8 @@ setup(
     classifiers=["Programming Language :: Python :: 3 :: Only"],
     py_modules=["tap_circle_ci"],
     install_requires=[
-        "singer-python==5.13.0",
-        "requests",
+        "singer-python==6.3.0",
+        "requests==2.32.5",
     ],
     extras_require={"dev": ["pylint"]},
     entry_points="""
