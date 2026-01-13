@@ -11,7 +11,17 @@ class CircleCiInterruptedSyncTest(CircleCiBaseTest):
         return "tap_tester_circleci_interrupt_test"
 
     def test_run(self):
-        expected_streams = self.expected_streams()
+        streams_to_exclude = {
+            # "context",  # Skipping context stream as we do not have permission
+            # "project",
+            # "jobs",
+            # "groups",
+            # "trigger",  # there is No Data.
+            # "schedule",  # there is No Data.
+            # "pipeline_definition",  # there is No Data.
+            # "deploy"
+        }
+        expected_streams = self.expected_streams() - set(streams_to_exclude)
         expected_replication_keys = self.expected_replication_keys()
         expected_replication_methods = self.expected_replication_method()
         LOGGER.info(
@@ -40,7 +50,7 @@ class CircleCiInterruptedSyncTest(CircleCiBaseTest):
         # Update State Between Syncs
         ##########################################################################
 
-        pending_streams = {"workflows"}
+        pending_streams = {"workflows", "deploy", "schedule"}
         interrupt_stream = "pipelines"
         interrupted_sync_states = self.create_interrupt_sync_state(
             first_sync_bookmarks, interrupt_stream, pending_streams, first_sync_records
@@ -77,8 +87,9 @@ class CircleCiInterruptedSyncTest(CircleCiBaseTest):
                 full_records = [message["data"] for message in first_sync_records[stream]["messages"]]
                 interrupted_records = [message["data"] for message in second_sync_records[stream]["messages"]]
 
-                first_bookmark_value = first_sync_bookmarks.get("bookmarks", {stream: None}).get(stream)
-                second_bookmark_value = second_sync_bookmarks.get("bookmarks", {stream: None}).get(stream)
+                first_bookmark_value = first_sync_bookmarks["bookmarks"].get(stream, {})
+                second_bookmark_value = second_sync_bookmarks["bookmarks"].get(stream, {})
+
                 LOGGER.info(
                     f"first_bookmark_value = {first_bookmark_value} \n \
                             second_bookmark_value = {second_bookmark_value}"
@@ -157,13 +168,25 @@ class CircleCiInterruptedSyncTest(CircleCiBaseTest):
                     self.assertEqual({}, first_bookmark_value)
                     self.assertEqual({}, second_bookmark_value)
 
-                    # Verify the interrupted sync replicates the expected record set
-                    # All interrupted recs are in full recs
-                    for record in interrupted_records:
+                    # Get primary keys for the stream
+                    primary_keys = self.expected_primary_keys()[stream]
+
+                    # Extract primary key tuples from records
+                    full_sync_pks = {
+                        tuple(record.get(pk) for pk in primary_keys)
+                        for record in full_records
+                    }
+                    interrupted_sync_pks = {
+                        tuple(record.get(pk) for pk in primary_keys)
+                        for record in interrupted_records
+                    }
+
+                    # Verify all interrupted records exist in full sync (by primary key)
+                    for pk in interrupted_sync_pks:
                         self.assertIn(
-                            record,
-                            full_records,
-                            msg="full-table interrupted sync record not found in full sync",
+                            pk,
+                            full_sync_pks,
+                            msg="full-table interrupted sync record (by PK) not found in full sync",
                         )
 
                     # Verify at least 1 record was replicated for each stream

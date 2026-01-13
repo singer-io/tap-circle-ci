@@ -20,9 +20,8 @@ class CircleCiAutomaticFields(CircleCiBaseTest):
         - Verify that all replicated records have unique primary key
         values.
         """
-
-        expected_streams = self.expected_streams()
-
+        streams_to_exclude = set({})
+        expected_streams = self.expected_streams() - streams_to_exclude
         # Instantiate connection
         conn_id = connections.ensure_connection(self)
 

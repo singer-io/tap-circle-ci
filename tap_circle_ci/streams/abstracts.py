@@ -1,7 +1,8 @@
 """tap-circle-ci abstract stream module."""
 #pylint: disable=W0223
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Iterator, List
+
 
 from singer import (
     Transformer,
@@ -27,6 +28,10 @@ class BaseStream(ABC):
      - Helper methods for catalog generation
      - `sync` and `get_records` method for performing sync
     """
+
+    def __init__(self, client=None) -> None:
+        """Initialize the BaseStream with a client."""
+        self.client = client
 
     @property
     @abstractmethod
@@ -101,8 +106,18 @@ class BaseStream(ABC):
          - https://github.com/singer-io/getting-started/blob/master/docs/SYNC_MODE.md#replication-method
         """
 
-    def __init__(self, client=None) -> None:
-        self.client = client
+    def iter_pages(self, url, token=None):
+        """Iterate through pages of a paginated API endpoint."""
+        next_token = token
+        has_more = True
+
+        while has_more:
+            params = {"page-token": next_token} if next_token else {}
+            response = self.client.get(url, params, {})
+            yield response
+
+            next_token = response.get("next_page_token")
+            has_more = next_token and next_token != params.get("page-token")
 
     @classmethod
     def get_metadata(cls, schema) -> Dict[str, str]:
@@ -115,6 +130,10 @@ class BaseStream(ABC):
                 "replication_method": cls.replication_method or cls.forced_replication_method,
             }
         )
+        # Add parent stream only if present
+        if getattr(cls, "parent_stream", None):
+            stream_metadata[0]["metadata"]["parent-tap-stream-id"] = cls.parent_stream
+
         stream_metadata = to_map(stream_metadata)
         if cls.valid_replication_keys is not None:
             for key in cls.valid_replication_keys:
@@ -187,3 +206,40 @@ class FullTableStream(BaseStream):
         """A wrapper for singer.get_bookmark to deal with compatibility for
         bookmark values or start values."""
         return write_bookmark(state, self.tap_stream_id, key, value)
+
+
+class CollaborationMixin:
+    """Mixin class for streams that depend on collaborations."""
+
+    def get_org_ids(self) -> List[str]:
+        """Fetch org IDs from the Collaborations stream."""
+        from .collaborations import Collaborations
+        shared_collaborations_ids = Collaborations(self.client).prefetch_collaborations_ids()
+        return shared_collaborations_ids
+
+    def get_collaborations(self, state: Dict) -> Tuple[List, int]:
+        """Returns collaborations and index for sync resuming on interruption."""
+        shared_collaborations_ids = self.get_org_ids()
+        last_synced = get_bookmark(state, self.tap_stream_id, "currently_syncing", False)
+        last_sync_index = 0
+        if last_synced:
+            for pos, collab_id in enumerate(shared_collaborations_ids):
+                if collab_id == last_synced:
+                    LOGGER.warning("Last Sync was interrupted after collaboration *****%s", str(collab_id)[-4:])
+                    last_sync_index = pos
+                    break
+        LOGGER.info("last index for %s-collaborations %s", self.tap_stream_id, last_sync_index)
+        return shared_collaborations_ids, last_sync_index
+
+    def get_url(self, organization_id: str) -> str:
+        """Build API endpoint URL for a given org_id."""
+        return self.url_endpoint.format(organization_id=organization_id)
+
+    def get_records(self, collab_id: str) -> Iterator[Dict]:
+        """Fetch all context records for a specific collaboration"""
+        url = self.get_url(collab_id)
+        for page in self.iter_pages(url):
+            items = page.get("items", [])
+            for record in items:
+                record["organization_id"] = collab_id
+                yield record
