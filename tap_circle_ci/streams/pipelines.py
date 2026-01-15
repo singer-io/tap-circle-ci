@@ -75,8 +75,6 @@ class Pipelines(IncrementalStream):
         eg: pipelines are required to fetch `workflows`
         """
         pipeline_ids = self.client.shared_pipeline_ids or {}
-        if not isinstance(pipeline_ids, dict):
-            pipeline_ids = {}
         project_pipeline_ids = []
         self.project = project
         if pipeline_ids and project in pipeline_ids:
