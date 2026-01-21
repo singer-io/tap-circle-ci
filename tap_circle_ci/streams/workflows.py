@@ -122,5 +122,5 @@ class Workflows(IncrementalStream):
             parent_ids, *_ = self.get_records(pipeline_id, None)
             pipeline_wflo_ids += parent_ids
         pipeline_wflo_ids.sort(key=lambda x: x[1])
-        self.client.shared_workflow_ids = pipeline_wflo_ids
+        self.client.shared_workflow_ids = {self.project: pipeline_wflo_ids}
         return pipeline_wflo_ids
