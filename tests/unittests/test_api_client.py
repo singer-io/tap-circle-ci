@@ -81,7 +81,7 @@ class HTTPErrorCodeHandling(TestCase):
             try:
                 self.client_obj.get(self.ENDPOINT, {}, {})
             except errors.Http500RequestError as err:
-                self.assertEqual(str(err), "Server Fault, Unable to process request")
+                self.assertIn("Server Fault", str(err))
                 raise err
 
     @mock.patch("time.sleep")
@@ -92,7 +92,7 @@ class HTTPErrorCodeHandling(TestCase):
             try:
                 self.client_obj.get(self.ENDPOINT, {}, {})
             except errors.Http502RequestError as err:
-                self.assertEqual(str(err), "Bad Gateway")
+                self.assertIn("Bad Gateway", str(err))
                 raise err
 
     @mock.patch("time.sleep")
@@ -103,7 +103,7 @@ class HTTPErrorCodeHandling(TestCase):
             try:
                 self.client_obj.get(self.ENDPOINT, {}, {})
             except errors.Http503RequestError as err:
-                self.assertEqual(str(err), "Service is currently unavailable")
+                self.assertIn("Service is currently unavailable", str(err))
                 raise err
 
     @mock.patch("time.sleep")
@@ -114,5 +114,5 @@ class HTTPErrorCodeHandling(TestCase):
             try:
                 self.client_obj.get(self.ENDPOINT, {}, {})
             except errors.Http504RequestError as err:
-                self.assertEqual(str(err), "API service time out")
+                self.assertIn("API service time out", str(err))
                 raise err

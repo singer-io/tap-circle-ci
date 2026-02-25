@@ -3,6 +3,7 @@ from typing import Dict
 import singer
 
 from tap_circle_ci.client import Client
+from tap_circle_ci.exceptions import Server5xxError
 from tap_circle_ci.streams import STREAMS
 
 LOGGER = singer.get_logger()
@@ -41,24 +42,34 @@ def sync(config: dict, state: Dict, catalog: singer.Catalog):
                 stream.replication_key,
             )
             requires_project = getattr(stream_obj, "requires_project", True)
-            if requires_project:
-                for project in projects:
-                    stream_obj.project = project
-                    LOGGER.info("Starting sync for project: %s", project)
+            try:
+                if requires_project:
+                    for project in projects:
+                        stream_obj.project = project
+                        LOGGER.info("Starting sync for project: %s", project)
+                        state = stream_obj.sync(
+                            state=state,
+                            schema=stream_schema,
+                            stream_metadata=stream_metadata,
+                            transformer=transformer,
+                        )
+                else:
+                    LOGGER.info("Running stream '%s' ", tap_stream_id)
                     state = stream_obj.sync(
                         state=state,
                         schema=stream_schema,
                         stream_metadata=stream_metadata,
                         transformer=transformer,
                     )
-            else:
-                LOGGER.info("Running stream '%s' ", tap_stream_id)
-                state = stream_obj.sync(
-                    state=state,
-                    schema=stream_schema,
-                    stream_metadata=stream_metadata,
-                    transformer=transformer,
+            except Server5xxError as server_err:
+                LOGGER.error(
+                    "Persistent server error syncing stream '%s' after retries exhausted: %s. "
+                    "Saving state checkpoint and continuing with next stream.",
+                    tap_stream_id,
+                    server_err,
                 )
+                singer.write_state(state)
+                continue
             singer.write_state(state)
     state = singer.set_currently_syncing(state, None)
     singer.write_state(state)

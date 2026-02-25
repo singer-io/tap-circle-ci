@@ -10,19 +10,64 @@ from . import exceptions as errors
 
 logger = get_logger()
 
+# Maximum number of retries for 5xx server errors
+MAX_5XX_RETRIES = 5
 
-def raise_for_error(response: requests.Response) -> None:
+
+def _log_backoff_attempt(details):
+    """Structured logging handler for backoff retry attempts."""
+    exc = details.get("exception", details.get("value", "unknown"))
+    logger.warning(
+        "Retry attempt %d/%d for %s after %.1fs wait | exception: %s",
+        details["tries"],
+        MAX_5XX_RETRIES,
+        details.get("args", ("",))[1] if len(details.get("args", ())) > 1 else "unknown endpoint",
+        details["wait"],
+        exc,
+    )
+
+
+def _log_backoff_giveup(details):
+    """Structured logging handler for backoff giveup (all retries exhausted)."""
+    exc = details.get("exception", details.get("value", "unknown"))
+    logger.error(
+        "All %d retries exhausted for %s | final exception: %s",
+        details["tries"],
+        details.get("args", ("",))[1] if len(details.get("args", ())) > 1 else "unknown endpoint",
+        exc,
+    )
+
+
+def raise_for_error(response: requests.Response, endpoint: str = None) -> None:
     """Raises the associated response exception. Takes in a response object,
     checks the status code, and throws the associated exception based on the
     status code.
 
-    :param resp: requests.Response object
+    For 5xx errors, raises a specific exception if one exists (e.g. Http500RequestError),
+    otherwise raises the generic Server5xxError with the status code.
+
+    :param response: requests.Response object
+    :param endpoint: the URL endpoint for contextual logging
     """
     try:
         response.raise_for_status()
     except (requests.HTTPError, requests.ConnectionError) as http_err:
         try:
             error_code = response.status_code
+
+            # Handle 5xx errors with the Server5xxError hierarchy
+            if 500 <= error_code <= 599:
+                specific_class = getattr(errors, f"Http{error_code}RequestError", None)
+                if specific_class and issubclass(specific_class, errors.Server5xxError):
+                    raise specific_class(endpoint=endpoint) from None
+                # Generic 5xx for codes without a dedicated class (e.g. 505, 507, 599)
+                raise errors.Server5xxError(
+                    message=f"Server error (HTTP {error_code})",
+                    status_code=error_code,
+                    endpoint=endpoint,
+                ) from None
+
+            # Non-5xx errors
             client_exception = getattr(
                 errors, f"Http{error_code}RequestError", errors.ClientError(message="Undefined Exception")
             )
@@ -71,14 +116,13 @@ class Client:
         wait_gen=backoff.expo,
         exception=(
             errors.Http400RequestError,
-            errors.Http500RequestError,
-            errors.Http502RequestError,
-            errors.Http503RequestError,
-            errors.Http504RequestError,
+            errors.Server5xxError,
             requests.ConnectionError,
         ),
         jitter=None,
-        max_tries=5,
+        max_tries=MAX_5XX_RETRIES,
+        on_backoff=_log_backoff_attempt,
+        on_giveup=_log_backoff_giveup,
     )
     @backoff.on_exception(
         wait_gen=backoff.expo, exception=errors.Http429RequestError, jitter=None, max_time=60, max_tries=6
@@ -101,16 +145,25 @@ class Client:
             return response
         if response.status_code != 200:
             try:
-                logger.error("Status : %s Message: %s", response.status_code, response.text)
+                logger.error(
+                    "HTTP %s error | endpoint: %s | method: %s | response: %s",
+                    response.status_code,
+                    endpoint,
+                    method,
+                    response.text,
+                )
             except AttributeError:
                 pass
             try:
-                raise_for_error(response)
+                raise_for_error(response, endpoint=endpoint)
             except errors.Http401RequestError as err:
-                logger.info("Authorization Failure, attempting to regenrate token")
+                logger.info("Authorization Failure, attempting to regenerate token")
                 raise err
             except errors.Http404RequestError:
                 logger.error("Resource Not Found %s", response.url or "")
                 return self.default_response
+            except errors.Server5xxError:
+                # Re-raise so that the backoff decorator can handle retries
+                raise
             return None
         return response.json()
