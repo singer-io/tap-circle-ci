@@ -59,7 +59,7 @@ def raise_for_error(response: requests.Response, endpoint: str = None) -> None:
             if 500 <= error_code <= 599:
                 specific_class = getattr(errors, f"Http{error_code}RequestError", None)
                 if specific_class and issubclass(specific_class, errors.Server5xxError):
-                    raise specific_class(endpoint=endpoint) from None
+                    raise specific_class(endpoint=endpoint) from None  # pylint: disable=not-callable
                 # Generic 5xx for codes without a dedicated class (e.g. 505, 507, 599)
                 raise errors.Server5xxError(
                     message=f"Server error (HTTP {error_code})",
