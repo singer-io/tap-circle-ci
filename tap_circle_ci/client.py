@@ -4,76 +4,49 @@ from typing import Any, Dict, Mapping, Optional, Tuple
 import backoff
 import requests
 from requests import session
+from requests.exceptions import Timeout, ConnectionError, ChunkedEncodingError
 from singer import get_logger
 
-from . import exceptions as errors
+from .exceptions import (
+    ERROR_CODE_EXCEPTION_MAPPING, ClientError, CircleCiBackoffError,
+    Http401RequestError, Http404RequestError
+)
 
 logger = get_logger()
 
-# Maximum number of retries for 5xx server errors
-MAX_5XX_RETRIES = 5
 
-
-def _log_backoff_attempt(details):
-    """Structured logging handler for backoff retry attempts."""
-    exc = details.get("exception", details.get("value", "unknown"))
-    logger.warning(
-        "Retry attempt %d/%d for %s after %.1fs wait | exception: %s",
-        details["tries"],
-        MAX_5XX_RETRIES,
-        details.get("args", ("",))[1] if len(details.get("args", ())) > 1 else "unknown endpoint",
-        details["wait"],
-        exc,
-    )
-
-
-def _log_backoff_giveup(details):
-    """Structured logging handler for backoff giveup (all retries exhausted)."""
-    exc = details.get("exception", details.get("value", "unknown"))
-    logger.error(
-        "All %d retries exhausted for %s | final exception: %s",
-        details["tries"],
-        details.get("args", ("",))[1] if len(details.get("args", ())) > 1 else "unknown endpoint",
-        exc,
-    )
-
-
-def raise_for_error(response: requests.Response, endpoint: str = None) -> None:
+def raise_for_error(response: requests.Response) -> None:
     """Raises the associated response exception. Takes in a response object,
     checks the status code, and throws the associated exception based on the
     status code.
 
-    For 5xx errors, raises a specific exception if one exists (e.g. Http500RequestError),
-    otherwise raises the generic Server5xxError with the status code.
-
     :param response: requests.Response object
-    :param endpoint: the URL endpoint for contextual logging
     """
     try:
-        response.raise_for_status()
-    except (requests.HTTPError, requests.ConnectionError) as http_err:
-        try:
-            error_code = response.status_code
+        response_json = response.json()
+    except Exception:
+        response_json = {}
+    if not isinstance(response_json, dict):
+        response_json = {}
+    if response.status_code not in [200, 201, 204]:
+        if response_json.get("error"):
+            message = f"HTTP-error-code: {response.status_code}, Error: {response_json.get('error')}"
+        else:
+            error_message = ERROR_CODE_EXCEPTION_MAPPING.get(
+                response.status_code, {}
+            ).get("message", "Unknown Error")
+            message = f"HTTP-error-code: {response.status_code}, Error: {response_json.get('message', error_message)}"
 
-            # Handle 5xx errors with the Server5xxError hierarchy
-            if 500 <= error_code <= 599:
-                specific_class = getattr(errors, f"Http{error_code}RequestError", None)
-                if specific_class and issubclass(specific_class, errors.Server5xxError):
-                    raise specific_class(endpoint=endpoint) from None  # pylint: disable=not-callable
-                # Generic 5xx for codes without a dedicated class (e.g. 505, 507, 599)
-                raise errors.Server5xxError(
-                    message=f"Server error (HTTP {error_code})",
-                    status_code=error_code,
-                    endpoint=endpoint,
-                ) from None
-
-            # Non-5xx errors
-            client_exception = getattr(
-                errors, f"Http{error_code}RequestError", errors.ClientError(message="Undefined Exception")
+        # For 5xx errors, use backoff exception if not specifically mapped
+        if 500 <= response.status_code < 600:
+            exc = ERROR_CODE_EXCEPTION_MAPPING.get(response.status_code, {}).get(
+                "raise_exception", CircleCiBackoffError
             )
-            raise client_exception from None
-        except (ValueError, TypeError, AttributeError):
-            raise errors.ClientError(http_err) from None
+        else:
+            exc = ERROR_CODE_EXCEPTION_MAPPING.get(response.status_code, {}).get(
+                "raise_exception", ClientError
+            )
+        raise exc(message, response) from None
 
 
 class Client:
@@ -100,7 +73,7 @@ class Client:
         headers.update({"Circle-Token": self._circle_token})
         return headers, params
 
-    @backoff.on_exception(wait_gen=backoff.expo, exception=(errors.Http401RequestError,), jitter=None, max_tries=1)
+    @backoff.on_exception(wait_gen=backoff.expo, exception=(CircleCiBackoffError,), jitter=None, max_tries=1)
     def get(self, endpoint: str, params: Dict, headers: Dict) -> Any:
         """Calls the make_request method with a prefixed method type `GET`"""
         headers, params = self.authenticate(headers, params)
@@ -115,17 +88,14 @@ class Client:
     @backoff.on_exception(
         wait_gen=backoff.expo,
         exception=(
-            errors.Http400RequestError,
-            errors.Server5xxError,
-            requests.ConnectionError,
+            ConnectionResetError,
+            ConnectionError,
+            ChunkedEncodingError,
+            Timeout,
+            CircleCiBackoffError,
         ),
-        jitter=None,
-        max_tries=MAX_5XX_RETRIES,
-        on_backoff=_log_backoff_attempt,
-        on_giveup=_log_backoff_giveup,
-    )
-    @backoff.on_exception(
-        wait_gen=backoff.expo, exception=errors.Http429RequestError, jitter=None, max_time=60, max_tries=6
+        max_tries=5,
+        factor=2,
     )
     def __make_request(self, method: str, endpoint: str, **kwargs) -> Optional[Mapping[Any, Any]]:
         """
@@ -155,15 +125,14 @@ class Client:
             except AttributeError:
                 pass
             try:
-                raise_for_error(response, endpoint=endpoint)
-            except errors.Http401RequestError as err:
+                raise_for_error(response)
+            except CircleCiBackoffError:
+                raise
+            except Http401RequestError as err:
                 logger.info("Authorization Failure, attempting to regenerate token")
                 raise err
-            except errors.Http404RequestError:
+            except Http404RequestError:
                 logger.error("Resource Not Found %s", response.url or "")
                 return self.default_response
-            except errors.Server5xxError:
-                # Re-raise so that the backoff decorator can handle retries
-                raise
             return None
         return response.json()

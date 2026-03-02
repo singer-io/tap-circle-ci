@@ -1,89 +1,100 @@
 """tap-circle-ci exception classes module."""
 
+
 class ClientError(Exception):
     """class representing Generic Http error."""
 
-    message = None
-
     def __init__(self, message=None, response=None):
-        super().__init__(message or self.message)
+        super().__init__(message)
+        self.message = message
         self.response = response
 
 
-class Http400RequestError(ClientError):
-    """class representing 400 status code."""
+class CircleCiBackoffError(ClientError):
+    """class representing backoff error handling."""
+    pass
 
-    message = "Unable to process request"
+
+class Http400RequestError(CircleCiBackoffError):
+    """class representing 400 status code."""
+    pass
 
 
 class Http401RequestError(ClientError):
     """class representing 401 status code."""
-
-    message = "Invalid credentials provided"
+    pass
 
 
 class Http403RequestError(ClientError):
     """class representing 403 status code."""
-
-    message = "Insufficient permission to access resource"
+    pass
 
 
 class Http404RequestError(ClientError):
     """class representing 404 status code."""
+    pass
 
-    message = "Resource not found"
 
-
-class Http429RequestError(ClientError):
+class Http429RequestError(CircleCiBackoffError):
     """class representing 429 status code."""
-
-    message = "The API limit exceeded"
-
-
-class Server5xxError(ClientError):
-    """Base class for all 5xx server errors (500-599).
-
-    This serves as the catch-all for any server-side error, enabling
-    unified retry logic for all 5xx status codes.
-    """
-
-    status_code = None
-    message = "Server error"
-
-    def __init__(self, message=None, response=None, status_code=None, endpoint=None):
-        self.status_code = status_code or self.__class__.status_code
-        self.endpoint = endpoint
-        final_message = message or self.message
-        if self.status_code:
-            final_message = f"HTTP {self.status_code}: {final_message}"
-        if self.endpoint:
-            final_message = f"{final_message} (endpoint: {self.endpoint})"
-        super().__init__(message=final_message, response=response)
+    pass
 
 
-class Http500RequestError(Server5xxError):
+class Http500RequestError(CircleCiBackoffError):
     """class representing 500 status code."""
-
-    status_code = 500
-    message = "Server Fault, Unable to process request"
+    pass
 
 
-class Http502RequestError(Server5xxError):
+class Http502RequestError(CircleCiBackoffError):
     """class representing 502 status code."""
-
-    status_code = 502
-    message = "Bad Gateway"
+    pass
 
 
-class Http503RequestError(Server5xxError):
+class Http503RequestError(CircleCiBackoffError):
     """class representing 503 status code."""
-
-    status_code = 503
-    message = "Service is currently unavailable"
+    pass
 
 
-class Http504RequestError(Server5xxError):
+class Http504RequestError(CircleCiBackoffError):
     """class representing 504 status code."""
+    pass
 
-    status_code = 504
-    message = "API service time out"
+
+ERROR_CODE_EXCEPTION_MAPPING = {
+    400: {
+        "raise_exception": Http400RequestError,
+        "message": "Unable to process request"
+    },
+    401: {
+        "raise_exception": Http401RequestError,
+        "message": "Invalid credentials provided"
+    },
+    403: {
+        "raise_exception": Http403RequestError,
+        "message": "Insufficient permission to access resource"
+    },
+    404: {
+        "raise_exception": Http404RequestError,
+        "message": "Resource not found"
+    },
+    429: {
+        "raise_exception": Http429RequestError,
+        "message": "The API limit exceeded"
+    },
+    500: {
+        "raise_exception": Http500RequestError,
+        "message": "Server Fault, Unable to process request"
+    },
+    502: {
+        "raise_exception": Http502RequestError,
+        "message": "Bad Gateway"
+    },
+    503: {
+        "raise_exception": Http503RequestError,
+        "message": "Service is currently unavailable"
+    },
+    504: {
+        "raise_exception": Http504RequestError,
+        "message": "API service time out"
+    }
+}
