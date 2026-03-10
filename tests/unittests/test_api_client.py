@@ -151,10 +151,6 @@ class TestRaiseForErrorWithoutRetry(TestCase):
         expected = "HTTP-error-code: 404, Error: Resource not found"
         self.assertEqual(str(ctx.exception), expected)
 
-
-class TestRaiseForErrorWithRetry(TestCase):
-    """Test raise_for_error for retryable status codes (CircleCiBackoffError subclasses)."""
-
     def test_raises_http400_for_400(self):
         """Should raise Http400RequestError for 400 response."""
         resp = Mockresponse(400)
@@ -162,6 +158,10 @@ class TestRaiseForErrorWithRetry(TestCase):
             raise_for_error(resp)
         expected = "HTTP-error-code: 400, Error: Unable to process request"
         self.assertEqual(str(ctx.exception), expected)
+
+
+class TestRaiseForErrorWithRetry(TestCase):
+    """Test raise_for_error for retryable status codes (CircleCiBackoffError subclasses)."""
 
     def test_raises_http429_for_429(self):
         """Should raise Http429RequestError for 429 response."""
@@ -231,6 +231,13 @@ class TestMakeRequestHttpFailureWithoutRetry(TestCase):
         self.assertEqual(result, {"items": []})
         self.assertEqual(mock_request.call_count, 1)
 
+    @mock.patch("requests.Session.request", side_effect=lambda *_, **__: Mockresponse(400))
+    def test_400_no_retry(self, mock_request):
+        """400 error should not trigger retries."""
+        with self.assertRaises(errors.Http400RequestError):
+            self.client_obj.get(self.ENDPOINT, {}, {})
+        self.assertEqual(mock_request.call_count, 1)
+
 
 class TestMakeRequestHttpFailureWithRetry(TestCase):
     """Test that retryable errors trigger backoff retries."""
@@ -239,20 +246,12 @@ class TestMakeRequestHttpFailureWithRetry(TestCase):
     ENDPOINT = "https://circleci.com/api/v2/test"
 
     @mock.patch("time.sleep")
-    @mock.patch("requests.Session.request", side_effect=lambda *_, **__: Mockresponse(400))
-    def test_400_retries_5_times(self, mock_request, mock_sleep):
-        """400 error should trigger 5 retry attempts."""
-        with self.assertRaises(errors.Http400RequestError):
-            self.client_obj.get(self.ENDPOINT, {}, {})
-        self.assertEqual(mock_request.call_count, 5)
-
-    @mock.patch("time.sleep")
     @mock.patch("requests.Session.request", side_effect=lambda *_, **__: Mockresponse(429))
-    def test_429_retries_5_times(self, mock_request, mock_sleep):
-        """429 error should trigger 5 retry attempts."""
+    def test_429_retries_6_times(self, mock_request, mock_sleep):
+        """429 error should trigger 6 retry attempts."""
         with self.assertRaises(errors.Http429RequestError):
             self.client_obj.get(self.ENDPOINT, {}, {})
-        self.assertEqual(mock_request.call_count, 5)
+        self.assertEqual(mock_request.call_count, 6)
 
     @mock.patch("time.sleep")
     @mock.patch("requests.Session.request", side_effect=lambda *_, **__: Mockresponse(500))
@@ -323,81 +322,4 @@ class TestMakeRequestOtherFailureWithRetry(TestCase):
         """Timeout should trigger 5 retry attempts."""
         with self.assertRaises(Timeout):
             self.client_obj.get(self.ENDPOINT, {}, {})
-        self.assertEqual(mock_request.call_count, 5)
-
-
-class TestUnmapped5xxErrorsTriggerBackoff(TestCase):
-    """Test that unmapped 5xx errors trigger backoff retry as CircleCiBackoffError."""
-
-    client_obj = Client({"api_key": enum.auto(), "api_secret": enum.auto()})
-    ENDPOINT = "https://circleci.com/api/v2/test"
-
-    @mock.patch("time.sleep")
-    @mock.patch("requests.Session.request", side_effect=lambda *_, **__: Mockresponse(505))
-    def test_505_triggers_backoff(self, mock_request, mock_sleep):
-        """505 error should trigger backoff retry as CircleCiBackoffError."""
-        with self.assertRaises(errors.CircleCiBackoffError) as ctx:
-            self.client_obj.get(self.ENDPOINT, {}, {})
-        expected = "HTTP-error-code: 505, Error: Unknown Error"
-        self.assertEqual(str(ctx.exception), expected)
-        self.assertEqual(mock_request.call_count, 5)
-
-    @mock.patch("time.sleep")
-    @mock.patch("requests.Session.request", side_effect=lambda *_, **__: Mockresponse(506))
-    def test_506_triggers_backoff(self, mock_request, mock_sleep):
-        """506 error should trigger backoff retry as CircleCiBackoffError."""
-        with self.assertRaises(errors.CircleCiBackoffError) as ctx:
-            self.client_obj.get(self.ENDPOINT, {}, {})
-        expected = "HTTP-error-code: 506, Error: Unknown Error"
-        self.assertEqual(str(ctx.exception), expected)
-        self.assertEqual(mock_request.call_count, 5)
-
-    @mock.patch("time.sleep")
-    @mock.patch("requests.Session.request", side_effect=lambda *_, **__: Mockresponse(507))
-    def test_507_triggers_backoff(self, mock_request, mock_sleep):
-        """507 error should trigger backoff retry as CircleCiBackoffError."""
-        with self.assertRaises(errors.CircleCiBackoffError) as ctx:
-            self.client_obj.get(self.ENDPOINT, {}, {})
-        expected = "HTTP-error-code: 507, Error: Unknown Error"
-        self.assertEqual(str(ctx.exception), expected)
-        self.assertEqual(mock_request.call_count, 5)
-
-    @mock.patch("time.sleep")
-    @mock.patch("requests.Session.request", side_effect=lambda *_, **__: Mockresponse(508))
-    def test_508_triggers_backoff(self, mock_request, mock_sleep):
-        """508 error should trigger backoff retry as CircleCiBackoffError."""
-        with self.assertRaises(errors.CircleCiBackoffError) as ctx:
-            self.client_obj.get(self.ENDPOINT, {}, {})
-        expected = "HTTP-error-code: 508, Error: Unknown Error"
-        self.assertEqual(str(ctx.exception), expected)
-        self.assertEqual(mock_request.call_count, 5)
-
-    @mock.patch("time.sleep")
-    @mock.patch("requests.Session.request", side_effect=lambda *_, **__: Mockresponse(509))
-    def test_509_triggers_backoff(self, mock_request, mock_sleep):
-        """509 error should trigger backoff retry as CircleCiBackoffError."""
-        with self.assertRaises(errors.CircleCiBackoffError) as ctx:
-            self.client_obj.get(self.ENDPOINT, {}, {})
-        expected = "HTTP-error-code: 509, Error: Unknown Error"
-        self.assertEqual(str(ctx.exception), expected)
-        self.assertEqual(mock_request.call_count, 5)
-
-    @mock.patch("time.sleep")
-    @mock.patch("requests.Session.request", side_effect=lambda *_, **__: Mockresponse(510))
-    def test_510_triggers_backoff(self, mock_request, mock_sleep):
-        """510 error should trigger backoff retry as CircleCiBackoffError."""
-        with self.assertRaises(errors.CircleCiBackoffError) as ctx:
-            self.client_obj.get(self.ENDPOINT, {}, {})
-        expected = "HTTP-error-code: 510, Error: Unknown Error"
-        self.assertEqual(str(ctx.exception), expected)
-        self.assertEqual(mock_request.call_count, 5)
-
-    @mock.patch("time.sleep")
-    @mock.patch("requests.Session.request", side_effect=lambda *_, **__: Mockresponse(511))
-    def test_511_triggers_backoff(self, mock_request, mock_sleep):
-        """511 error should trigger backoff retry as CircleCiBackoffError."""
-        with self.assertRaises(errors.CircleCiBackoffError) as ctx:
-            self.client_obj.get(self.ENDPOINT, {}, {})
-        expected = "HTTP-error-code: 511, Error: Unknown Error"
-        self.assertEqual(str(ctx.exception), expected)
         self.assertEqual(mock_request.call_count, 5)

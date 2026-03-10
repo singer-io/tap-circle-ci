@@ -9,7 +9,7 @@ from singer import get_logger
 
 from .exceptions import (
     ERROR_CODE_EXCEPTION_MAPPING, ClientError, CircleCiBackoffError,
-    Http401RequestError, Http404RequestError
+    Http401RequestError, Http404RequestError, Http429RequestError
 )
 
 logger = get_logger()
@@ -25,8 +25,6 @@ def raise_for_error(response: requests.Response) -> None:
     try:
         response_json = response.json()
     except Exception:
-        response_json = {}
-    if not isinstance(response_json, dict):
         response_json = {}
     if response.status_code not in [200, 201, 204]:
         if response_json.get("error"):
@@ -85,6 +83,13 @@ class Client:
         headers, params = self.authenticate(headers, params)
         self.__make_request("POST", endpoint, headers=headers, params=params, data=body)
 
+    @backoff.on_exception(
+        wait_gen=backoff.expo,
+        exception=Http429RequestError,
+        max_tries=6,
+        max_time=60,
+        jitter=None,
+    )
     @backoff.on_exception(
         wait_gen=backoff.expo,
         exception=(

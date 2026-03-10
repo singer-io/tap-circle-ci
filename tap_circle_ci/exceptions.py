@@ -15,7 +15,7 @@ class CircleCiBackoffError(ClientError):
     pass
 
 
-class Http400RequestError(CircleCiBackoffError):
+class Http400RequestError(ClientError):
     """class representing 400 status code."""
     pass
 
@@ -35,7 +35,7 @@ class Http404RequestError(ClientError):
     pass
 
 
-class Http429RequestError(CircleCiBackoffError):
+class Http429RequestError(ClientError):
     """class representing 429 status code."""
     pass
 
