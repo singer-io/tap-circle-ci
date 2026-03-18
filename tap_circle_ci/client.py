@@ -116,8 +116,10 @@ class Client:
             Dict,List,None: Returns a `Json Parsed` HTTP Response or None if exception
         """
         response = self._session.request(method, endpoint, **kwargs)
-        if response.status_code == 201:
-            return response
+        if response.status_code in (201, 204):
+            # 201 responses may include a body which callers can parse as needed.
+            # 204 responses have no content; return an empty mapping to signal success.
+            return {} if response.status_code == 204 else response
         if response.status_code != 200:
             try:
                 logger.error(
