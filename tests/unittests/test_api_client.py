@@ -44,7 +44,7 @@ class HTTPErrorCodeHandling(TestCase):
             try:
                 self.client_obj.get(self.ENDPOINT, {}, {})
             except errors.Http400RequestError as err:
-                self.assertEqual(str(err), "HTTP-error-code: 400, Error: Unable to process request")
+                self.assertEqual(str(err), "HTTP-error-code: 400, Error: Unable to process request, endpoint: https://test.com/test")
                 raise err
 
     @mock.patch("time.sleep")
@@ -55,7 +55,7 @@ class HTTPErrorCodeHandling(TestCase):
             try:
                 self.client_obj.get(self.ENDPOINT, {}, {})
             except errors.Http401RequestError as err:
-                self.assertEqual(str(err), "HTTP-error-code: 401, Error: Invalid credentials provided")
+                self.assertEqual(str(err), "HTTP-error-code: 401, Error: Invalid credentials provided, endpoint: https://test.com/test")
                 raise err
 
     @mock.patch("requests.Session.request", side_effect=lambda *_, **__: Mockresponse(403))
@@ -65,7 +65,7 @@ class HTTPErrorCodeHandling(TestCase):
             try:
                 self.client_obj.get(self.ENDPOINT, {}, {})
             except errors.Http403RequestError as err:
-                self.assertEqual(str(err), "HTTP-error-code: 403, Error: Insufficient permission to access resource")
+                self.assertEqual(str(err), "HTTP-error-code: 403, Error: Insufficient permission to access resource, endpoint: https://test.com/test")
                 raise err
 
     @mock.patch("time.sleep")
@@ -76,7 +76,7 @@ class HTTPErrorCodeHandling(TestCase):
             try:
                 self.client_obj.get(self.ENDPOINT, {}, {})
             except errors.Http429RequestError as err:
-                self.assertEqual(str(err), "HTTP-error-code: 429, Error: The API limit exceeded")
+                self.assertEqual(str(err), "HTTP-error-code: 429, Error: The API limit exceeded, endpoint: https://test.com/test")
                 raise err
 
     @mock.patch("time.sleep")
@@ -87,7 +87,7 @@ class HTTPErrorCodeHandling(TestCase):
             try:
                 self.client_obj.get(self.ENDPOINT, {}, {})
             except errors.Http500RequestError as err:
-                self.assertEqual(str(err), "HTTP-error-code: 500, Error: Server Fault, Unable to process request")
+                self.assertEqual(str(err), "HTTP-error-code: 500, Error: Server Fault, Unable to process request, endpoint: https://test.com/test")
                 raise err
 
     @mock.patch("time.sleep")
@@ -98,7 +98,7 @@ class HTTPErrorCodeHandling(TestCase):
             try:
                 self.client_obj.get(self.ENDPOINT, {}, {})
             except errors.Http502RequestError as err:
-                self.assertEqual(str(err), "HTTP-error-code: 502, Error: Bad Gateway")
+                self.assertEqual(str(err), "HTTP-error-code: 502, Error: Bad Gateway, endpoint: https://test.com/test")
                 raise err
 
     @mock.patch("time.sleep")
@@ -109,7 +109,7 @@ class HTTPErrorCodeHandling(TestCase):
             try:
                 self.client_obj.get(self.ENDPOINT, {}, {})
             except errors.Http503RequestError as err:
-                self.assertEqual(str(err), "HTTP-error-code: 503, Error: Service is currently unavailable")
+                self.assertEqual(str(err), "HTTP-error-code: 503, Error: Service is currently unavailable, endpoint: https://test.com/test")
                 raise err
 
     @mock.patch("time.sleep")
@@ -120,7 +120,7 @@ class HTTPErrorCodeHandling(TestCase):
             try:
                 self.client_obj.get(self.ENDPOINT, {}, {})
             except errors.Http504RequestError as err:
-                self.assertEqual(str(err), "HTTP-error-code: 504, Error: API service time out")
+                self.assertEqual(str(err), "HTTP-error-code: 504, Error: API service time out, endpoint: https://test.com/test")
                 raise err
 
 
@@ -161,7 +161,7 @@ class TestRaiseForErrorWithoutRetry(TestCase):
 
 
 class TestRaiseForErrorWithRetry(TestCase):
-    """Test raise_for_error for retryable status codes (CircleCiBackoffError subclasses)."""
+    """Test raise_for_error for retryable status codes (Server5xxError subclasses)."""
 
     def test_raises_http429_for_429(self):
         """Should raise Http429RequestError for 429 response."""

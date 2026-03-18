@@ -10,8 +10,8 @@ class ClientError(Exception):
         self.response = response
 
 
-class CircleCiBackoffError(ClientError):
-    """class representing backoff error handling."""
+class Server5xxError(ClientError):
+    """class representing retryable 5xx server errors."""
     pass
 
 
@@ -40,22 +40,22 @@ class Http429RequestError(ClientError):
     pass
 
 
-class Http500RequestError(CircleCiBackoffError):
+class Http500RequestError(Server5xxError):
     """class representing 500 status code."""
     pass
 
 
-class Http502RequestError(CircleCiBackoffError):
+class Http502RequestError(Server5xxError):
     """class representing 502 status code."""
     pass
 
 
-class Http503RequestError(CircleCiBackoffError):
+class Http503RequestError(Server5xxError):
     """class representing 503 status code."""
     pass
 
 
-class Http504RequestError(CircleCiBackoffError):
+class Http504RequestError(Server5xxError):
     """class representing 504 status code."""
     pass
 

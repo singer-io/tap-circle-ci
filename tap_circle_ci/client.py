@@ -8,37 +8,39 @@ from requests.exceptions import Timeout, ConnectionError, ChunkedEncodingError
 from singer import get_logger
 
 from .exceptions import (
-    ERROR_CODE_EXCEPTION_MAPPING, ClientError, CircleCiBackoffError,
+    ERROR_CODE_EXCEPTION_MAPPING, ClientError, Server5xxError,
     Http401RequestError, Http404RequestError, Http429RequestError
 )
 
 logger = get_logger()
 
 
-def raise_for_error(response: requests.Response) -> None:
+def raise_for_error(response: requests.Response, endpoint: str = "") -> None:
     """Raises the associated response exception. Takes in a response object,
     checks the status code, and throws the associated exception based on the
     status code.
 
     :param response: requests.Response object
+    :param endpoint: the API endpoint that was called
     """
     try:
         response_json = response.json()
     except Exception:
         response_json = {}
     if response.status_code not in [200, 201, 204]:
+        endpoint_info = f", endpoint: {endpoint}" if endpoint else ""
         if response_json.get("error"):
-            message = f"HTTP-error-code: {response.status_code}, Error: {response_json.get('error')}"
+            message = f"HTTP-error-code: {response.status_code}, Error: {response_json.get('error')}{endpoint_info}"
         else:
             error_message = ERROR_CODE_EXCEPTION_MAPPING.get(
                 response.status_code, {}
             ).get("message", "Unknown Error")
-            message = f"HTTP-error-code: {response.status_code}, Error: {response_json.get('message', error_message)}"
+            message = f"HTTP-error-code: {response.status_code}, Error: {response_json.get('message', error_message)}{endpoint_info}"
 
         # For 5xx errors, use backoff exception if not specifically mapped
         if 500 <= response.status_code < 600:
             exc = ERROR_CODE_EXCEPTION_MAPPING.get(response.status_code, {}).get(
-                "raise_exception", CircleCiBackoffError
+                "raise_exception", Server5xxError
             )
         else:
             exc = ERROR_CODE_EXCEPTION_MAPPING.get(response.status_code, {}).get(
@@ -71,7 +73,7 @@ class Client:
         headers.update({"Circle-Token": self._circle_token})
         return headers, params
 
-    @backoff.on_exception(wait_gen=backoff.expo, exception=(CircleCiBackoffError,), jitter=None, max_tries=1)
+    @backoff.on_exception(wait_gen=backoff.expo, exception=(Server5xxError,), jitter=None, max_tries=1)
     def get(self, endpoint: str, params: Dict, headers: Dict) -> Any:
         """Calls the make_request method with a prefixed method type `GET`"""
         headers, params = self.authenticate(headers, params)
@@ -97,7 +99,7 @@ class Client:
             ConnectionError,
             ChunkedEncodingError,
             Timeout,
-            CircleCiBackoffError,
+            Server5xxError,
         ),
         max_tries=5,
         factor=2,
@@ -132,8 +134,8 @@ class Client:
             except AttributeError:
                 pass
             try:
-                raise_for_error(response)
-            except CircleCiBackoffError:
+                raise_for_error(response, endpoint)
+            except Server5xxError:
                 raise
             except Http401RequestError as err:
                 logger.info("Authorization Failure, attempting to regenerate token")
