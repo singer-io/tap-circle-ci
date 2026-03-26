@@ -11,7 +11,7 @@ setup(
     py_modules=["tap_circle_ci"],
     install_requires=[
         "singer-python==6.3.0",
-        "requests==2.32.5",
+        "requests==2.33.0",
     ],
     extras_require={"dev": ["pylint"]},
     entry_points="""
