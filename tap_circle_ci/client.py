@@ -73,7 +73,6 @@ class Client:
         headers.update({"Circle-Token": self._circle_token})
         return headers, params
 
-    @backoff.on_exception(wait_gen=backoff.expo, exception=(Server5xxError,), jitter=None, max_tries=1)
     def get(self, endpoint: str, params: Dict, headers: Dict) -> Any:
         """Calls the make_request method with a prefixed method type `GET`"""
         headers, params = self.authenticate(headers, params)
