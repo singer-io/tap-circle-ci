@@ -231,12 +231,13 @@ class TestMakeRequestHttpFailureWithoutRetry(TestCase):
         self.assertEqual(result, {"items": []})
         self.assertEqual(mock_request.call_count, 1)
 
+    @mock.patch("time.sleep")
     @mock.patch("requests.Session.request", side_effect=lambda *_, **__: Mockresponse(400))
-    def test_400_no_retry(self, mock_request):
-        """400 error should not trigger retries."""
+    def test_400_retries_5_times(self, mock_request, mock_sleep):
+        """400 error should trigger 5 retry attempts."""
         with self.assertRaises(errors.Http400RequestError):
             self.client_obj.get(self.ENDPOINT, {}, {})
-        self.assertEqual(mock_request.call_count, 1)
+        self.assertEqual(mock_request.call_count, 5)
 
 
 class TestMakeRequestHttpFailureWithRetry(TestCase):
@@ -323,3 +324,49 @@ class TestMakeRequestOtherFailureWithRetry(TestCase):
         with self.assertRaises(Timeout):
             self.client_obj.get(self.ENDPOINT, {}, {})
         self.assertEqual(mock_request.call_count, 5)
+
+
+class TestRaiseForErrorMessageBranches(TestCase):
+    """Test that raise_for_error composes error messages correctly
+    when the response body contains 'error' or 'message' keys."""
+
+    def test_uses_error_field_from_response_body(self):
+        """When response JSON has an 'error' key, use it in the message."""
+        resp = Mockresponse(400, text={"error": "bad input data"})
+        with self.assertRaises(errors.Http400RequestError) as ctx:
+            raise_for_error(resp, endpoint="https://circleci.com/api/v2/test")
+        self.assertIn("bad input data", str(ctx.exception))
+        self.assertIn("endpoint: https://circleci.com/api/v2/test", str(ctx.exception))
+
+    def test_uses_message_field_from_response_body(self):
+        """When response JSON has a 'message' key but no 'error', use it."""
+        resp = Mockresponse(500, text={"message": "internal failure"})
+        with self.assertRaises(errors.Http500RequestError) as ctx:
+            raise_for_error(resp, endpoint="https://circleci.com/api/v2/test")
+        self.assertIn("internal failure", str(ctx.exception))
+        self.assertIn("endpoint: https://circleci.com/api/v2/test", str(ctx.exception))
+
+    def test_falls_back_to_mapping_message(self):
+        """When response JSON has neither 'error' nor 'message', fall back to mapping."""
+        resp = Mockresponse(401, text={})
+        with self.assertRaises(errors.Http401RequestError) as ctx:
+            raise_for_error(resp)
+        self.assertEqual(
+            str(ctx.exception),
+            "HTTP-error-code: 401, Error: Invalid credentials provided",
+        )
+
+    def test_error_field_without_endpoint(self):
+        """Error field message without endpoint info."""
+        resp = Mockresponse(403, text={"error": "forbidden action"})
+        with self.assertRaises(errors.Http403RequestError) as ctx:
+            raise_for_error(resp)
+        self.assertIn("forbidden action", str(ctx.exception))
+        self.assertNotIn("endpoint:", str(ctx.exception))
+
+    def test_unmapped_5xx_raises_server5xx(self):
+        """An unmapped 5xx code should raise Server5xxError."""
+        resp = Mockresponse(599, text={"message": "unknown server error"})
+        with self.assertRaises(errors.Server5xxError) as ctx:
+            raise_for_error(resp)
+        self.assertIn("unknown server error", str(ctx.exception))

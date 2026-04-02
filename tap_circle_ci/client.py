@@ -9,7 +9,7 @@ from singer import get_logger
 
 from .exceptions import (
     ERROR_CODE_EXCEPTION_MAPPING, ClientError, Server5xxError,
-    Http401RequestError, Http404RequestError, Http429RequestError
+    Http400RequestError, Http401RequestError, Http404RequestError, Http429RequestError
 )
 
 logger = get_logger()
@@ -94,6 +94,7 @@ class Client:
     @backoff.on_exception(
         wait_gen=backoff.expo,
         exception=(
+            Http400RequestError,
             ConnectionResetError,
             ConnectionError,
             ChunkedEncodingError,
@@ -102,6 +103,7 @@ class Client:
         ),
         max_tries=5,
         factor=2,
+        jitter=None,
     )
     def __make_request(self, method: str, endpoint: str, **kwargs) -> Optional[Mapping[Any, Any]]:
         """
@@ -118,9 +120,14 @@ class Client:
         """
         response = self._session.request(method, endpoint, **kwargs)
         if response.status_code in (201, 204):
-            # 201 responses may include a body which callers can parse as needed.
-            # 204 responses have no content; return an empty mapping to signal success.
-            return {} if response.status_code == 204 else response
+            # 201 may include a body; parse it if present, else return empty mapping.
+            # 204 has no content; return empty mapping to signal success.
+            if response.status_code == 204 or not response.content:
+                return {}
+            try:
+                return response.json()
+            except Exception:
+                return {}
         if response.status_code != 200:
             try:
                 logger.error(
