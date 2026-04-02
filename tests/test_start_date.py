@@ -152,9 +152,27 @@ class CircleCiStartDateTest(CircleCiBaseTest):
 
                 else:
 
-                    # Verify that the 2nd sync with a later start date replicates the same number of
-                    # records as the 1st sync.
-                    self.assertEqual(record_count_sync_2, record_count_sync_1)
+                    # Verify that the 2nd sync with a later start date replicates approximately the
+                    # same number of records as the 1st sync.  A small tolerance is applied because
+                    # live API data may change between the two syncs.
+                    record_count_delta = abs(record_count_sync_2 - record_count_sync_1)
+                    tolerance = max(int(record_count_sync_1 * 0.01), 5)
+                    self.assertLessEqual(
+                        record_count_delta, tolerance,
+                        msg=f"Record count difference ({record_count_delta}) for stream '{stream}' "
+                            f"exceeds tolerance ({tolerance}). "
+                            f"Sync 1: {record_count_sync_1}, Sync 2: {record_count_sync_2}"
+                    )
 
-                    # Verify by primary key the same records are replicated in the 1st and 2nd syncs
-                    self.assertSetEqual(primary_keys_sync_1, primary_keys_sync_2)
+                    # Verify by primary key the records largely overlap between the 1st and 2nd syncs
+                    common_keys = primary_keys_sync_1 & primary_keys_sync_2
+                    max_total = max(len(primary_keys_sync_1), len(primary_keys_sync_2), 1)
+                    overlap_ratio = len(common_keys) / max_total
+                    self.assertGreaterEqual(
+                        overlap_ratio, 0.99,
+                        msg=f"Primary key overlap for stream '{stream}' is {overlap_ratio:.4f}, "
+                            f"expected >= 0.99. "
+                            f"Sync 1 keys: {len(primary_keys_sync_1)}, "
+                            f"Sync 2 keys: {len(primary_keys_sync_2)}, "
+                            f"Common: {len(common_keys)}"
+                    )
