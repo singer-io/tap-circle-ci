@@ -272,27 +272,18 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
                         for record in second_sync_messages
                     }
 
-                    # Verify records largely overlap between syncs.
-                    # A small tolerance is applied because live API data may change
-                    # between the two syncs (new pipeline definitions, etc.).
-                    tolerance = max(int(first_sync_count * 0.01), 5)
-
-                    record_count_delta = abs(second_sync_count - first_sync_count)
-                    self.assertLessEqual(
-                        record_count_delta, tolerance,
-                        msg=f"Record count difference ({record_count_delta}) for stream '{stream}' "
-                            f"exceeds tolerance ({tolerance}). "
-                            f"Sync 1: {first_sync_count}, Sync 2: {second_sync_count}"
+                    # Verify all records from first sync exist in second sync (by primary key)
+                    self.assertTrue(
+                        first_sync_pks.issubset(second_sync_pks),
+                        msg=f"Not all primary keys from sync 1 found in sync 2 for stream '{stream}'. "
+                            f"Missing: {first_sync_pks - second_sync_pks}"
                     )
 
-                    common_pks = first_sync_pks & second_sync_pks
-                    max_total = max(len(first_sync_pks), len(second_sync_pks), 1)
-                    overlap_ratio = len(common_pks) / max_total
+                    # Verify the second sync has equal or more records than the first
                     self.assertGreaterEqual(
-                        overlap_ratio, 0.99,
-                        msg=f"Primary key overlap ratio ({overlap_ratio:.4f}) for stream '{stream}' "
-                            f"is below 0.99. Sync 1 PKs: {len(first_sync_pks)}, "
-                            f"Sync 2 PKs: {len(second_sync_pks)}, Common: {len(common_pks)}"
+                        second_sync_count, first_sync_count,
+                        msg=f"Second sync record count ({second_sync_count}) is less than "
+                            f"first sync ({first_sync_count}) for stream '{stream}'"
                     )
                 else:
                     raise NotImplementedError(

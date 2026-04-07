@@ -152,50 +152,16 @@ class CircleCiStartDateTest(CircleCiBaseTest):
 
                 else:
 
-                    # Verify that the 2nd sync with a later start date replicates approximately the
-                    # same number of records as the 1st sync.  A small tolerance is applied because
-                    # live API data may change between the two syncs.
-                    record_count_delta = abs(record_count_sync_2 - record_count_sync_1)
-                    tolerance = max(int(record_count_sync_1 * 0.01), 5)
-                    self.assertLessEqual(
-                        record_count_delta, tolerance,
-                        msg=f"Record count difference ({record_count_delta}) for stream '{stream}' "
-                            f"exceeds tolerance ({tolerance}). "
-                            f"Sync 1: {record_count_sync_1}, Sync 2: {record_count_sync_2}"
+                    # Verify all records from first sync exist in second sync (by primary key)
+                    self.assertTrue(
+                        primary_keys_sync_1.issubset(primary_keys_sync_2),
+                        msg=f"Not all primary keys from sync 1 found in sync 2 for stream '{stream}'. "
+                            f"Missing: {primary_keys_sync_1 - primary_keys_sync_2}"
                     )
 
-                    # Verify by primary key the records largely overlap between the 1st and 2nd syncs.
-                    # The minimum acceptable overlap ratio is derived from the allowed count tolerance
-                    # to avoid flaky failures on small record sets.
-                    common_keys = primary_keys_sync_1 & primary_keys_sync_2
-                    max_total = max(len(primary_keys_sync_1), len(primary_keys_sync_2), 1)
-                    overlap_ratio = len(common_keys) / max_total
-
-                    if max_total <= tolerance:
-                        # When the allowed record-count drift is as large as (or larger than) the
-                        # total number of records, any overlap ratio would be acceptable under the
-                        # current tolerance. In this case, skip enforcing a strict overlap check.
-                        LOGGER.warning(
-                            "Skipping primary key overlap assertion for stream '%s' because "
-                            "max_total=%d is less than or equal to tolerance=%d "
-                            "(overlap_ratio=%.4f).",
-                            stream,
-                            max_total,
-                            tolerance,
-                            overlap_ratio,
-                        )
-                    else:
-                        # Require that the overlap ratio reflects the maximum number of records that
-                        # are allowed to differ between the two syncs.
-                        min_overlap_ratio = max(0.0, 1.0 - (tolerance / max_total))
-                        self.assertGreaterEqual(
-                            overlap_ratio, min_overlap_ratio,
-                            msg=(
-                                f"Primary key overlap for stream '{stream}' is {overlap_ratio:.4f}, "
-                                f"expected >= {min_overlap_ratio:.4f}. "
-                                f"Sync 1 keys: {len(primary_keys_sync_1)}, "
-                                f"Sync 2 keys: {len(primary_keys_sync_2)}, "
-                                f"Common: {len(common_keys)}, "
-                                f"Tolerance: {tolerance}"
-                            )
-                        )
+                    # Verify the second sync has equal or more records than the first
+                    self.assertGreaterEqual(
+                        record_count_sync_2, record_count_sync_1,
+                        msg=f"Second sync record count ({record_count_sync_2}) is less than "
+                            f"first sync ({record_count_sync_1}) for stream '{stream}'"
+                    )

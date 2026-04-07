@@ -94,7 +94,6 @@ class Client:
     @backoff.on_exception(
         wait_gen=backoff.expo,
         exception=(
-            Http400RequestError,
             ConnectionResetError,
             ConnectionError,
             ChunkedEncodingError,
