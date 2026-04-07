@@ -45,7 +45,6 @@ class CircleCiStartDateTest(CircleCiBaseTest):
         # Run initial sync
         record_count_by_stream_1 = self.run_and_verify_sync(conn_id_1)
         synced_records_1 = runner.get_records_from_target_output()
-        LOGGER.info(self.start_date + " SYNC 1: " + str(record_count_by_stream_1))
 
         ##########################################################################
         # Update START DATE Between Syncs
