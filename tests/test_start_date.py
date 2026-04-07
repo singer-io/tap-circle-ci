@@ -45,6 +45,7 @@ class CircleCiStartDateTest(CircleCiBaseTest):
         # Run initial sync
         record_count_by_stream_1 = self.run_and_verify_sync(conn_id_1)
         synced_records_1 = runner.get_records_from_target_output()
+        LOGGER.info(self.start_date + " SYNC 1: " + str(record_count_by_stream_1))
 
         ##########################################################################
         # Update START DATE Between Syncs
@@ -154,14 +155,14 @@ class CircleCiStartDateTest(CircleCiBaseTest):
 
                     # Verify all records from first sync exist in second sync (by primary key)
                     self.assertTrue(
-                        primary_keys_sync_1.issubset(primary_keys_sync_2),
-                        msg=f"Not all primary keys from sync 1 found in sync 2 for stream '{stream}'. "
-                            f"Missing: {primary_keys_sync_1 - primary_keys_sync_2}"
+                        primary_keys_sync_2.issubset(primary_keys_sync_1),
+                        msg=f"Not all primary keys from sync 2 found in sync 1 for stream '{stream}'. "
+                            f"Missing: {primary_keys_sync_2 - primary_keys_sync_1}"
                     )
 
-                    # Verify the second sync has equal or more records than the first
+                    # Verify sync 1 (earlier start_date) has equal or more records than sync 2
                     self.assertGreaterEqual(
-                        record_count_sync_2, record_count_sync_1,
-                        msg=f"Second sync record count ({record_count_sync_2}) is less than "
-                            f"first sync ({record_count_sync_1}) for stream '{stream}'"
+                        record_count_sync_1, record_count_sync_2,
+                        msg=f"Sync 1 record count ({record_count_sync_1}) is less than "
+                            f"sync 2 ({record_count_sync_2}) for stream '{stream}'"
                     )
