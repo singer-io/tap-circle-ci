@@ -231,13 +231,12 @@ class TestMakeRequestHttpFailureWithoutRetry(TestCase):
         self.assertEqual(result, {"items": []})
         self.assertEqual(mock_request.call_count, 1)
 
-    @mock.patch("time.sleep")
     @mock.patch("requests.Session.request", side_effect=lambda *_, **__: Mockresponse(400))
-    def test_400_retries_5_times(self, mock_request, mock_sleep):
-        """400 error should trigger 5 retry attempts."""
+    def test_400_no_retry(self, mock_request):
+        """400 error should not trigger retries."""
         with self.assertRaises(errors.Http400RequestError):
             self.client_obj.get(self.ENDPOINT, {}, {})
-        self.assertEqual(mock_request.call_count, 5)
+        self.assertEqual(mock_request.call_count, 1)
 
 
 class TestMakeRequestHttpFailureWithRetry(TestCase):
