@@ -1,64 +1,100 @@
 """tap-circle-ci exception classes module."""
 
+
 class ClientError(Exception):
     """class representing Generic Http error."""
 
-    message = None
-
     def __init__(self, message=None, response=None):
-        super().__init__(message or self.message)
+        super().__init__(message)
+        self.message = message
         self.response = response
+
+
+class Server5xxError(ClientError):
+    """class representing retryable 5xx server errors."""
+    pass
 
 
 class Http400RequestError(ClientError):
     """class representing 400 status code."""
-
-    message = "Unable to process request"
+    pass
 
 
 class Http401RequestError(ClientError):
     """class representing 401 status code."""
-
-    message = "Invalid credentials provided"
+    pass
 
 
 class Http403RequestError(ClientError):
     """class representing 403 status code."""
-
-    message = "Insufficient permission to access resource"
+    pass
 
 
 class Http404RequestError(ClientError):
     """class representing 404 status code."""
-
-    message = "Resource not found"
+    pass
 
 
 class Http429RequestError(ClientError):
     """class representing 429 status code."""
+    pass
 
-    message = "The API limit exceeded"
 
-
-class Http500RequestError(ClientError):
+class Http500RequestError(Server5xxError):
     """class representing 500 status code."""
+    pass
 
-    message = "Server Fault, Unable to process request"
 
-
-class Http502RequestError(ClientError):
+class Http502RequestError(Server5xxError):
     """class representing 502 status code."""
+    pass
 
-    message = "Bad Gateway"
 
-
-class Http503RequestError(ClientError):
+class Http503RequestError(Server5xxError):
     """class representing 503 status code."""
+    pass
 
-    message = "Service is currently unavailable"
 
-
-class Http504RequestError(ClientError):
+class Http504RequestError(Server5xxError):
     """class representing 504 status code."""
+    pass
 
-    message = "API service time out"
+
+ERROR_CODE_EXCEPTION_MAPPING = {
+    400: {
+        "raise_exception": Http400RequestError,
+        "message": "Unable to process request"
+    },
+    401: {
+        "raise_exception": Http401RequestError,
+        "message": "Invalid credentials provided"
+    },
+    403: {
+        "raise_exception": Http403RequestError,
+        "message": "Insufficient permission to access resource"
+    },
+    404: {
+        "raise_exception": Http404RequestError,
+        "message": "Resource not found"
+    },
+    429: {
+        "raise_exception": Http429RequestError,
+        "message": "The API limit exceeded"
+    },
+    500: {
+        "raise_exception": Http500RequestError,
+        "message": "Server Fault, Unable to process request"
+    },
+    502: {
+        "raise_exception": Http502RequestError,
+        "message": "Bad Gateway"
+    },
+    503: {
+        "raise_exception": Http503RequestError,
+        "message": "Service is currently unavailable"
+    },
+    504: {
+        "raise_exception": Http504RequestError,
+        "message": "API service time out"
+    }
+}

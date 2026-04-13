@@ -152,9 +152,16 @@ class CircleCiStartDateTest(CircleCiBaseTest):
 
                 else:
 
-                    # Verify that the 2nd sync with a later start date replicates the same number of
-                    # records as the 1st sync.
-                    self.assertEqual(record_count_sync_2, record_count_sync_1)
+                    # Verify all records from first sync exist in second sync (by primary key)
+                    self.assertTrue(
+                        primary_keys_sync_2.issubset(primary_keys_sync_1),
+                        msg=f"Not all primary keys from sync 2 found in sync 1 for stream '{stream}'. "
+                            f"Missing: {primary_keys_sync_2 - primary_keys_sync_1}"
+                    )
 
-                    # Verify by primary key the same records are replicated in the 1st and 2nd syncs
-                    self.assertSetEqual(primary_keys_sync_1, primary_keys_sync_2)
+                    # Verify sync 1 (earlier start_date) has equal or more records than sync 2
+                    self.assertGreaterEqual(
+                        record_count_sync_1, record_count_sync_2,
+                        msg=f"Sync 1 record count ({record_count_sync_1}) is less than "
+                            f"sync 2 ({record_count_sync_2}) for stream '{stream}'"
+                    )

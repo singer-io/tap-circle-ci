@@ -4,31 +4,49 @@ from typing import Any, Dict, Mapping, Optional, Tuple
 import backoff
 import requests
 from requests import session
+from requests.exceptions import Timeout, ConnectionError, ChunkedEncodingError
 from singer import get_logger
 
-from . import exceptions as errors
+from .exceptions import (
+    ERROR_CODE_EXCEPTION_MAPPING, ClientError, Server5xxError,
+    Http400RequestError, Http401RequestError, Http404RequestError, Http429RequestError
+)
 
 logger = get_logger()
 
 
-def raise_for_error(response: requests.Response) -> None:
+def raise_for_error(response: requests.Response, endpoint: str = "") -> None:
     """Raises the associated response exception. Takes in a response object,
     checks the status code, and throws the associated exception based on the
     status code.
 
-    :param resp: requests.Response object
+    :param response: requests.Response object
+    :param endpoint: the API endpoint that was called
     """
     try:
-        response.raise_for_status()
-    except (requests.HTTPError, requests.ConnectionError) as http_err:
-        try:
-            error_code = response.status_code
-            client_exception = getattr(
-                errors, f"Http{error_code}RequestError", errors.ClientError(message="Undefined Exception")
+        response_json = response.json()
+    except Exception:
+        response_json = {}
+    if response.status_code not in [200, 201, 204]:
+        endpoint_info = f", endpoint: {endpoint}" if endpoint else ""
+        if response_json.get("error"):
+            message = f"HTTP-error-code: {response.status_code}, Error: {response_json.get('error')}{endpoint_info}"
+        else:
+            error_message = ERROR_CODE_EXCEPTION_MAPPING.get(
+                response.status_code, {}
+            ).get("message", "Unknown Error")
+            message = f"HTTP-error-code: {response.status_code}, Error: {response_json.get('message', error_message)}{endpoint_info}"
+
+        # For 5xx errors, use backoff exception if not specifically mapped
+        if 500 <= response.status_code < 600:
+            exc = ERROR_CODE_EXCEPTION_MAPPING.get(response.status_code, {}).get(
+                "raise_exception", Server5xxError
             )
-            raise client_exception from None
-        except (ValueError, TypeError, AttributeError):
-            raise errors.ClientError(http_err) from None
+        else:
+            exc = ERROR_CODE_EXCEPTION_MAPPING.get(response.status_code, {}).get(
+                "raise_exception", ClientError
+            )
+        raise exc(message, response) from None
 
 
 class Client:
@@ -55,7 +73,6 @@ class Client:
         headers.update({"Circle-Token": self._circle_token})
         return headers, params
 
-    @backoff.on_exception(wait_gen=backoff.expo, exception=(errors.Http401RequestError,), jitter=None, max_tries=1)
     def get(self, endpoint: str, params: Dict, headers: Dict) -> Any:
         """Calls the make_request method with a prefixed method type `GET`"""
         headers, params = self.authenticate(headers, params)
@@ -69,19 +86,23 @@ class Client:
 
     @backoff.on_exception(
         wait_gen=backoff.expo,
-        exception=(
-            errors.Http400RequestError,
-            errors.Http500RequestError,
-            errors.Http502RequestError,
-            errors.Http503RequestError,
-            errors.Http504RequestError,
-            requests.ConnectionError,
-        ),
+        exception=Http429RequestError,
+        max_tries=6,
+        max_time=60,
         jitter=None,
-        max_tries=5,
     )
     @backoff.on_exception(
-        wait_gen=backoff.expo, exception=errors.Http429RequestError, jitter=None, max_time=60, max_tries=6
+        wait_gen=backoff.expo,
+        exception=(
+            ConnectionResetError,
+            ConnectionError,
+            ChunkedEncodingError,
+            Timeout,
+            Server5xxError,
+        ),
+        max_tries=5,
+        factor=2,
+        jitter=None,
     )
     def __make_request(self, method: str, endpoint: str, **kwargs) -> Optional[Mapping[Any, Any]]:
         """
@@ -97,19 +118,34 @@ class Client:
             Dict,List,None: Returns a `Json Parsed` HTTP Response or None if exception
         """
         response = self._session.request(method, endpoint, **kwargs)
-        if response.status_code == 201:
-            return response
+        if response.status_code in (201, 204):
+            # 201 may include a body; parse it if present, else return empty mapping.
+            # 204 has no content; return empty mapping to signal success.
+            if response.status_code == 204 or not response.content:
+                return {}
+            try:
+                return response.json()
+            except Exception:
+                return {}
         if response.status_code != 200:
             try:
-                logger.error("Status : %s Message: %s", response.status_code, response.text)
+                logger.error(
+                    "HTTP %s error | endpoint: %s | method: %s | response: %s",
+                    response.status_code,
+                    endpoint,
+                    method,
+                    response.text,
+                )
             except AttributeError:
                 pass
             try:
-                raise_for_error(response)
-            except errors.Http401RequestError as err:
-                logger.info("Authorization Failure, attempting to regenrate token")
+                raise_for_error(response, endpoint)
+            except Server5xxError:
+                raise
+            except Http401RequestError as err:
+                logger.info("Authorization Failure, attempting to regenerate token")
                 raise err
-            except errors.Http404RequestError:
+            except Http404RequestError:
                 logger.error("Resource Not Found %s", response.url or "")
                 return self.default_response
             return None

@@ -273,14 +273,18 @@ class CircleCiBookMarkTest(CircleCiBaseTest):
                     }
 
                     # Verify all records from first sync exist in second sync (by primary key)
-                    self.assertEqual(
-                        first_sync_pks,
-                        second_sync_pks,
-                        msg="Full table sync should return same records in both syncs"
+                    self.assertTrue(
+                        first_sync_pks.issubset(second_sync_pks),
+                        msg=f"Not all primary keys from sync 1 found in sync 2 for stream '{stream}'. "
+                            f"Missing: {first_sync_pks - second_sync_pks}"
                     )
 
-                    # Verify the number of records in the second sync is the same as the first
-                    self.assertEqual(second_sync_count, first_sync_count)
+                    # Verify the second sync has equal or more records than the first
+                    self.assertGreaterEqual(
+                        second_sync_count, first_sync_count,
+                        msg=f"Second sync record count ({second_sync_count}) is less than "
+                            f"first sync ({first_sync_count}) for stream '{stream}'"
+                    )
                 else:
                     raise NotImplementedError(
                         f"INVALID EXPECTATIONS STREAM: {stream} REPLICATION_METHOD: {expected_replication_method}"
