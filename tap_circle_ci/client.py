@@ -9,7 +9,7 @@ from singer import get_logger
 
 from .exceptions import (
     ERROR_CODE_EXCEPTION_MAPPING, ClientError, Server5xxError,
-    Http400RequestError, Http401RequestError, Http404RequestError, Http429RequestError
+    Http401RequestError, Http404RequestError, Http429RequestError
 )
 
 logger = get_logger()
