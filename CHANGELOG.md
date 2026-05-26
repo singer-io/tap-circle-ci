@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1
+* Fix 5xx error handling [#26](https://github.com/singer-io/tap-circle-ci/pull/26)
+* Library version Upgrade
+
 ## 1.1.0
 * Added New streams into the tap [#19](https://github.com/singer-io/tap-circle-ci/pull/19)
 * Library version Upgrade [#20](https://github.com/singer-io/tap-circle-ci/pull/20)
