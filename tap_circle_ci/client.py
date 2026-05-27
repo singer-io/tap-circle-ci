@@ -8,7 +8,8 @@ from requests.exceptions import Timeout, ConnectionError, ChunkedEncodingError
 from singer import metrics
 
 from .exceptions import (
-    ERROR_CODE_EXCEPTION_MAPPING, ClientError, Server5xxError, Http429RequestError
+    ERROR_CODE_EXCEPTION_MAPPING, ClientError, Server5xxError,
+    Http404RequestError, Http429RequestError
 )
 
 
@@ -119,7 +120,10 @@ class Client:
                 if method == "GET":
                     kwargs.pop("data", None)
                 response = self._session.request(method, endpoint, **kwargs)
-                raise_for_error(response, endpoint)
+                try:
+                    raise_for_error(response, endpoint)
+                except Http404RequestError:
+                    return self.default_response
             else:
                 raise ValueError(f"Unsupported method: {method}")
 
