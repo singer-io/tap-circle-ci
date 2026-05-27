@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.2
+* Refactored client code for error handling [30](https://github.com/singer-io/tap-circle-ci/pull/30)
+
 ## 1.1.1
 * Fix 5xx error handling [#26](https://github.com/singer-io/tap-circle-ci/pull/26)
 * Library version Upgrade
