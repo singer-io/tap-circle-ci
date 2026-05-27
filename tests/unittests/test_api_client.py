@@ -225,10 +225,10 @@ class TestMakeRequestHttpFailureWithoutRetry(TestCase):
         self.assertEqual(mock_request.call_count, 1)
 
     @mock.patch("requests.Session.request", side_effect=lambda *_, **__: Mockresponse(404))
-    def test_404_returns_default_response(self, mock_request):
-        """404 error should return default response without retry."""
-        result = self.client_obj.get(self.ENDPOINT, {}, {})
-        self.assertEqual(result, {"items": []})
+    def test_404_no_retry(self, mock_request):
+        """404 error should not trigger retries."""
+        with self.assertRaises(errors.Http404RequestError):
+            self.client_obj.get(self.ENDPOINT, {}, {})
         self.assertEqual(mock_request.call_count, 1)
 
     @mock.patch("requests.Session.request", side_effect=lambda *_, **__: Mockresponse(400))
