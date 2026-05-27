@@ -5,13 +5,11 @@ import backoff
 import requests
 from requests import session
 from requests.exceptions import Timeout, ConnectionError, ChunkedEncodingError
-from singer import get_logger, metrics
+from singer import metrics
 
 from .exceptions import (
     ERROR_CODE_EXCEPTION_MAPPING, ClientError, Server5xxError, Http429RequestError
 )
-
-logger = get_logger()
 
 
 def raise_for_error(response: requests.Response, endpoint: str = "") -> None:
