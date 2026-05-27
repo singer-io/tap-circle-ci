@@ -116,7 +116,7 @@ class Client:
         Returns:
             Dict,List,None: Returns a `Json Parsed` HTTP Response or None if exception
         """
-        with metrics.http_request_timer(endpoint) as timer:
+        with metrics.http_request_timer(endpoint):
             if method in ("GET", "POST"):
                 if method == "GET":
                     kwargs.pop("data", None)
