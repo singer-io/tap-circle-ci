@@ -5,14 +5,12 @@ import backoff
 import requests
 from requests import session
 from requests.exceptions import Timeout, ConnectionError, ChunkedEncodingError
-from singer import get_logger
+from singer import metrics
 
 from .exceptions import (
     ERROR_CODE_EXCEPTION_MAPPING, ClientError, Server5xxError,
-    Http401RequestError, Http404RequestError, Http429RequestError
+    Http404RequestError, Http429RequestError
 )
-
-logger = get_logger()
 
 
 def raise_for_error(response: requests.Response, endpoint: str = "") -> None:
@@ -117,36 +115,22 @@ class Client:
         Returns:
             Dict,List,None: Returns a `Json Parsed` HTTP Response or None if exception
         """
-        response = self._session.request(method, endpoint, **kwargs)
-        if response.status_code in (201, 204):
-            # 201 may include a body; parse it if present, else return empty mapping.
-            # 204 has no content; return empty mapping to signal success.
-            if response.status_code == 204 or not response.content:
-                return {}
-            try:
-                return response.json()
-            except Exception:
-                return {}
-        if response.status_code != 200:
-            try:
-                logger.error(
-                    "HTTP %s error | endpoint: %s | method: %s | response: %s",
-                    response.status_code,
-                    endpoint,
-                    method,
-                    response.text,
-                )
-            except AttributeError:
-                pass
-            try:
-                raise_for_error(response, endpoint)
-            except Server5xxError:
-                raise
-            except Http401RequestError as err:
-                logger.info("Authorization Failure, attempting to regenerate token")
-                raise err
-            except Http404RequestError:
-                logger.error("Resource Not Found %s", response.url or "")
-                return self.default_response
-            return None
-        return response.json()
+        with metrics.http_request_timer(endpoint):
+            if method in ("GET", "POST"):
+                if method == "GET":
+                    kwargs.pop("data", None)
+                response = self._session.request(method, endpoint, **kwargs)
+                try:
+                    raise_for_error(response, endpoint)
+                except Http404RequestError:
+                    return self.default_response
+            else:
+                raise ValueError(f"Unsupported method: {method}")
+
+        if response.status_code == 204 or not response.content:
+            return {}
+
+        try:
+            return response.json()
+        except ValueError:
+            return {}
