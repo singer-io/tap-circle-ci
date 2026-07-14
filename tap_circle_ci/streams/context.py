@@ -18,7 +18,7 @@ class Context(CollaborationMixin, FullTableStream):
 
     stream = "context"
     tap_stream_id = "context"
-    key_properties = ["id", "organization_id"]
+    key_properties = ["id"]
     url_endpoint = "https://circleci.com/api/v2/context?owner-id={organization_id}&owner-type=organization"
     project = None
     parent_stream = "collaborations"

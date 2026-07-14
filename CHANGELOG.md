@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0.0
+**BREAKING CHANGES**: Simplified key_properties for multiple streams based on CircleCI API analysis confirming globally unique IDs.
+* context: key_properties changed from `["id", "organization_id"]` to `["id"]` (globally unique per CircleCI docs: GET /v2/context/{id})
+* deploy: key_properties changed from `["id", "organization_id"]` to `["id"]` (globally unique per CircleCI docs: GET /v2/deploy/environments/{id})
+* pipeline_definition: key_properties changed from `["id", "project_id", "organization_id"]` to `["id"]` (globally unique per CircleCI docs)
+* project: key_properties changed from `["id", "organization_id"]` to `["id"]` (globally unique per CircleCI docs)
+* jobs: key_properties changed from `["id", "_workflow_id"]` to `["id"]` (globally unique per CircleCI docs)
+* trigger: key_properties changed from `["id", "project_id", "pipeline_definition_id", "organization_id"]` to `["id"]` (fixes MySQL key length limit error)
+* schedule: key_properties changed from `["id", "project-slug"]` to `["id", "project_id"]` (uses correct API ID field)
+
+**Migration**: Existing bookmark state files remain compatible. However, records in target tables using old key_properties will not match new keys. Migration requires reinitializing the target schema for affected streams.
+
 ## 1.1.2
 * Refactor client code for error handling [30](https://github.com/singer-io/tap-circle-ci/pull/30)
 

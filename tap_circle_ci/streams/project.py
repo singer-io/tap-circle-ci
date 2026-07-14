@@ -17,7 +17,7 @@ class Project(CollaborationMixin, FullTableStream):
 
     stream = "project"
     tap_stream_id = "project"
-    key_properties = ["id", "organization_id"]
+    key_properties = ["id"]
     url_endpoint = "https://circleci.com/api/private/project?organization-id={organization_id}"
     parent_stream = "collaborations"
     requires_project = False

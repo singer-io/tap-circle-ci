@@ -18,7 +18,7 @@ class Deploy(CollaborationMixin, IncrementalStream):
 
     stream = "deploy"
     tap_stream_id = "deploy"
-    key_properties = ["id", "organization_id"]
+    key_properties = ["id"]
     replication_key = "updated_at"
     valid_replication_keys = ["updated_at"]
     url_endpoint = "https://circleci.com/api/v2/deploy/environments?org-id={organization_id}&page-size={page_size}"
