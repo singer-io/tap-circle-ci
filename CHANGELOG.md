@@ -8,7 +8,7 @@
 * project: key_properties changed from `["id", "organization_id"]` to `["id"]` (globally unique per CircleCI docs)
 * jobs: key_properties changed from `["id", "_workflow_id"]` to `["id"]` (globally unique per CircleCI docs)
 * trigger: key_properties changed from `["id", "project_id", "pipeline_definition_id", "organization_id"]` to `["id"]` (fixes MySQL key length limit error)
-* schedule: key_properties changed from `["id", "project-slug"]` to `["id", "project_id"]` (uses correct API ID field)
+* schedule: key_properties changed from `["id", "project-slug"]` to `["id", "project_id"]` (uses correct API ID field); added `project_id` field to schema
 
 **Migration**: Existing bookmark state files remain compatible. However, records in target tables using old key_properties will not match new keys. Migration requires reinitializing the target schema for affected streams.
 
