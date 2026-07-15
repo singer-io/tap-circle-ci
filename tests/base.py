@@ -101,7 +101,7 @@ class CircleCiBaseTest(unittest.TestCase):
                 self.PARENT_TAP_STREAM_ID: "collaborations",
             },
             "schedule": {
-                self.PRIMARY_KEYS: {"id"},
+                self.PRIMARY_KEYS: {"id", "project_id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.OBEYS_START_DATE: True,
                 self.REPLICATION_KEYS: {"updated-at"},
