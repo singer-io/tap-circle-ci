@@ -65,18 +65,18 @@ class CircleCiBaseTest(unittest.TestCase):
                 self.OBEYS_START_DATE: True,
             },
             "jobs": {
-                self.PRIMARY_KEYS: {"id"},
+                self.PRIMARY_KEYS: {"id", "_workflow_id"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
                 self.OBEYS_START_DATE: False,
             },
             "context": {
-                self.PRIMARY_KEYS: {"id"},
+                self.PRIMARY_KEYS: {"id", "organization_id"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
                 self.OBEYS_START_DATE: False,
                 self.PARENT_TAP_STREAM_ID: "collaborations",
             },
             "deploy": {
-                self.PRIMARY_KEYS: {"id"},
+                self.PRIMARY_KEYS: {"id", "organization_id"},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {"updated_at"},
                 self.OBEYS_START_DATE: True,
@@ -89,13 +89,13 @@ class CircleCiBaseTest(unittest.TestCase):
                 self.PARENT_TAP_STREAM_ID: "collaborations",
             },
             "pipeline_definition": {
-                self.PRIMARY_KEYS: {"id"},
+                self.PRIMARY_KEYS: {"id", "project_id", "organization_id"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
                 self.OBEYS_START_DATE: False,
                 self.PARENT_TAP_STREAM_ID: "project",
             },
             "project": {
-                self.PRIMARY_KEYS: {"id"},
+                self.PRIMARY_KEYS: {"id", "organization_id"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
                 self.OBEYS_START_DATE: False,
                 self.PARENT_TAP_STREAM_ID: "collaborations",
@@ -108,7 +108,7 @@ class CircleCiBaseTest(unittest.TestCase):
                 self.PARENT_TAP_STREAM_ID: "project",
             },
             "trigger": {
-                self.PRIMARY_KEYS: {"id"},
+                self.PRIMARY_KEYS: {"id", "project_id", "pipeline_definition_id"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
                 self.OBEYS_START_DATE: False,
                 self.PARENT_TAP_STREAM_ID: "pipeline_definition",

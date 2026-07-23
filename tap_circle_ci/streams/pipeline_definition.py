@@ -18,7 +18,7 @@ class PipelineDefinition(FullTableStream):
 
     stream = "pipeline_definition"
     tap_stream_id = "pipeline_definition"
-    key_properties = ["id"]
+    key_properties = ["id", "project_id", "organization_id"]
     url_endpoint = "https://circleci.com/api/v2/projects/{project_id}/pipeline-definitions"
     parent_stream = "project"
     requires_project = False
