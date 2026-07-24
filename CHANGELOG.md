@@ -1,16 +1,22 @@
 # Changelog
 
 ## 2.0.0
-**BREAKING CHANGES**: Simplified key_properties for multiple streams based on CircleCI API analysis confirming globally unique IDs.
-* context: key_properties changed from `["id", "organization_id"]` to `["id"]` (globally unique per CircleCI docs: GET /v2/context/{id})
-* deploy: key_properties changed from `["id", "organization_id"]` to `["id"]` (globally unique per CircleCI docs: GET /v2/deploy/environments/{id})
-* pipeline_definition: key_properties changed from `["id", "project_id", "organization_id"]` to `["id"]` (globally unique per CircleCI docs)
-* project: key_properties changed from `["id", "organization_id"]` to `["id"]` (globally unique per CircleCI docs)
-* jobs: key_properties changed from `["id", "_workflow_id"]` to `["id"]` (globally unique per CircleCI docs)
-* trigger: key_properties changed from `["id", "project_id", "pipeline_definition_id", "organization_id"]` to `["id"]` (fixes MySQL key length limit error)
+**BREAKING CHANGES**: Restored composite key_properties for multiple streams after discovering CircleCI API `id` field is NOT globally unique.
+
+Test data analysis revealed that the same `id` values appear across different organizations/projects/workflows, meaning the `id` field is scoped, not globally unique. While CircleCI docs claim IDs are unique, they appear to refer to a different system UUID not returned in the API response. The composite keys are necessary for data integrity.
+
+**Key Changes:**
+* context: key_properties remains `["id", "organization_id"]` (id is scoped to organization)
+* deploy: key_properties remains `["id", "organization_id"]` (id is scoped to organization)
+* pipeline_definition: key_properties remains `["id", "project_id", "organization_id"]` (id is scoped within project+org)
+* project: key_properties remains `["id", "organization_id"]` (id is scoped to organization)
+* jobs: key_properties remains `["id", "_workflow_id"]` (id is scoped to workflow)
+* trigger: key_properties remains `["id", "project_id", "pipeline_definition_id", "organization_id"]` (id is scoped within pipeline+project+org, consistent with sibling streams)
 * schedule: key_properties changed from `["id", "project-slug"]` to `["id", "project_id"]` (uses correct API ID field); added `project_id` field to schema
 
-**Migration**: Existing bookmark state files remain compatible. However, records in target tables using old key_properties will not match new keys. Migration requires reinitializing the target schema for affected streams.
+**Fix for MySQL Key Length (SAC-31452)**: The original issue reported MySQL error "Specified key was too long; max key length is 3072 bytes" for the `trigger` table's 4-column composite key. Root cause: schema fields for `id`, `project_id`, `pipeline_definition_id`, and `organization_id` were unconstrained strings, causing MySQL targets to allocate oversized VARCHAR columns (e.g. VARCHAR(255) in utf8mb4 reserves 1020 bytes/column, and 4 such columns exceed the 3072-byte limit). Since these fields are always 36-character UUIDs, added `"maxLength": 36` to these fields in the `trigger` and `pipeline_definition` schemas, bounding each column to 144 bytes (utf8mb4) and keeping every composite key comfortably under the MySQL limit without sacrificing the composite keys required for uniqueness.
+
+**Migration**: Records in target tables will require schema reinitialization for affected streams due to key changes.
 
 ## 1.1.2
 * Refactor client code for error handling [30](https://github.com/singer-io/tap-circle-ci/pull/30)

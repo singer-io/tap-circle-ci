@@ -18,7 +18,7 @@ class Trigger(FullTableStream):
 
     stream = "trigger"
     tap_stream_id = "trigger"
-    key_properties = ["id", "project_id", "pipeline_definition_id"]
+    key_properties = ["id", "project_id", "pipeline_definition_id", "organization_id"]
     parent_stream = "pipeline_definition"
     requires_project = False
 

@@ -3,13 +3,16 @@
   "additionalProperties": false,
   "properties": {
     "id": {
-      "type": "string"
+      "type": "string",
+      "maxLength": 36
     },
     "project_id": {
-      "type": ["null", "string"]
+      "type": ["null", "string"],
+      "maxLength": 36
     },
     "organization_id": {
-      "type": ["null", "string"]
+      "type": ["null", "string"],
+      "maxLength": 36
     },
     "name": {
       "type": ["null", "string"]

@@ -108,7 +108,7 @@ class CircleCiBaseTest(unittest.TestCase):
                 self.PARENT_TAP_STREAM_ID: "project",
             },
             "trigger": {
-                self.PRIMARY_KEYS: {"id", "project_id", "pipeline_definition_id"},
+                self.PRIMARY_KEYS: {"id", "project_id", "pipeline_definition_id", "organization_id"},
                 self.REPLICATION_METHOD: self.FULL_TABLE,
                 self.OBEYS_START_DATE: False,
                 self.PARENT_TAP_STREAM_ID: "pipeline_definition",

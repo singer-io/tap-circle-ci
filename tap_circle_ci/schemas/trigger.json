@@ -3,7 +3,8 @@
   "additionalProperties": false,
   "properties": {
     "id": {
-      "type": "string"
+      "type": "string",
+      "maxLength": 36
     },
     "event_name": {
       "type": [
@@ -103,19 +104,22 @@
       "type": [
         "null",
         "string"
-      ]
+      ],
+      "maxLength": 36
     },
     "pipeline_definition_id": {
       "type": [
         "null",
         "string"
-      ]
+      ],
+      "maxLength": 36
     },
     "organization_id": {
       "type": [
         "null",
         "string"
-      ]
+      ],
+      "maxLength": 36
     }
   }
 }
