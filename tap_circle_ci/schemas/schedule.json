@@ -159,12 +159,6 @@
         "null",
         "string"
       ]
-    },
-    "project_id": {
-      "type": [
-        "null",
-        "string"
-      ]
     }
   }
 }
