@@ -165,7 +165,7 @@ class CircleCiBaseTest(unittest.TestCase):
     def get_properties(self, original: bool = True):
         """Configuration of properties required for the tap."""
         return_value = {
-            "start_date": "2026-01-29T00:00:00Z",
+            "start_date": "2026-05-01T00:00:00Z",
             "project_slugs": os.getenv("TAP_CIRCLE_CI_PROJECTS"),
         }
         if original:
