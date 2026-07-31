@@ -5,12 +5,14 @@ import backoff
 import requests
 from requests import session
 from requests.exceptions import Timeout, ConnectionError, ChunkedEncodingError
-from singer import metrics
+from singer import metrics, get_logger
 
 from .exceptions import (
     ERROR_CODE_EXCEPTION_MAPPING, ClientError, Server5xxError,
     Http404RequestError, Http429RequestError
 )
+
+LOGGER = get_logger()
 
 
 def raise_for_error(response: requests.Response, endpoint: str = "") -> None:
@@ -123,6 +125,10 @@ class Client:
                 try:
                     raise_for_error(response, endpoint)
                 except Http404RequestError:
+                    LOGGER.warning(
+                        "Received 404 for endpoint %s, treating as no data. Response body: %s",
+                        endpoint, response.text[:500]
+                    )
                     return self.default_response
             else:
                 raise ValueError(f"Unsupported method: {method}")
