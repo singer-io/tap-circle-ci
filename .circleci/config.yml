@@ -1,7 +1,7 @@
 version: 2.1
 jobs:
   build:
-    parallelism: 2
+    parallelism: 3
     docker:
       - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester-uv
     steps:
