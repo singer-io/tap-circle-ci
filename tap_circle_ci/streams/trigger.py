@@ -52,13 +52,21 @@ class Trigger(FullTableStream):
         return combinations, last_sync_index
 
     def get_parent_projects(self) -> List[Dict]:
-        """Fetch projects from Project stream."""
+        """Fetch projects from Project stream, filtered by config."""
         from .project import Project
         project_stream = Project(self.client)
-        projects = project_stream.prefetch_project_ids()
-        if not projects:
+        all_projects = project_stream.prefetch_project_ids()
+        if not all_projects:
             LOGGER.warning("No projects found in shared_project_ids")
-        unique_projects = {p["id"]: p for p in projects if p.get("id")}
+
+        # Filter to only configured project slugs
+        configured_slugs = set(filter(None, self.client.config["project_slugs"].split()))
+        filtered_projects = [p for p in all_projects if p.get("slug") in configured_slugs]
+
+        if not filtered_projects:
+            LOGGER.warning("No configured projects found in synced projects")
+
+        unique_projects = {p["id"]: p for p in filtered_projects if p.get("id")}
         return list(unique_projects.values())
 
     def get_pipeline_definitions_for_project(self, project_id: str) -> List[str]:
