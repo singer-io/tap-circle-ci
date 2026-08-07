@@ -3,6 +3,7 @@
 ## 2.0.0
 **BREAKING CHANGE**: Fix MySQL "key too long" error on `trigger` stream [#31](https://github.com/singer-io/tap-circle-ci/pull/31)
 * `trigger`: `key_properties` changed from `["id", "project_id", "pipeline_definition_id", "organization_id"]` to `["id", "pipeline_definition_id", "organization_id"]`
+* `trigger`, `pipeline_definition`, `schedule`: fixed project scoping so these streams only sync projects listed in `project_slugs`, instead of every project across every accessible org
 
 ## 1.1.2
 * Refactor client code for error handling [30](https://github.com/singer-io/tap-circle-ci/pull/30)
