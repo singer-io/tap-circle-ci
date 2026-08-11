@@ -34,7 +34,7 @@ class Schedule(IncrementalStream):
         all_projects = project_stream.prefetch_project_ids()
 
         # Filter to only configured project slugs
-        configured_slugs = set(filter(None, self.client.config["project_slugs"].split()))
+        configured_slugs = set(self.client.config.get("project_slugs", "").split())
         filtered_projects = [p for p in all_projects if p.get("slug") in configured_slugs]
 
         if not filtered_projects:
