@@ -40,10 +40,6 @@ class Schedule(IncrementalStream):
         if not filtered_projects:
             LOGGER.warning("No configured projects found in synced projects")
 
-        if filtered_projects:
-            LOGGER.info("Filtered schedule projects to configured slugs: %s",
-                       [p.get("slug") for p in filtered_projects])
-
         return filtered_projects
 
     def get_projects(self, state: Dict) -> Tuple[List, int]:
