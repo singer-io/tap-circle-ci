@@ -28,10 +28,19 @@ class Schedule(IncrementalStream):
     url_endpoint = "https://circleci.com/api/v2/project/{project_slug}/schedule"
 
     def get_project_slugs(self) -> List[Dict]:
-        """Fetch project slugs from Project stream."""
+        """Fetch project slugs from Project stream, filtered by config."""
         from .project import Project
         project_stream = Project(self.client)
-        return project_stream.prefetch_project_ids()
+        all_projects = project_stream.prefetch_project_ids()
+
+        # Filter to only configured project slugs
+        configured_slugs = set(self.client.config.get("project_slugs", "").split())
+        filtered_projects = [p for p in all_projects if p.get("slug") in configured_slugs]
+
+        if not filtered_projects:
+            LOGGER.warning("No configured projects found in synced projects")
+
+        return filtered_projects
 
     def get_projects(self, state: Dict) -> Tuple[List, int]:
         """Returns projects and index for sync resuming on interruption."""

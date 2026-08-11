@@ -11,7 +11,7 @@ LOGGER = singer.get_logger()
 def sync(config: dict, state: Dict, catalog: singer.Catalog):
     """Performs sync for selected streams with proper dependency ordering."""
     client = Client(config)
-    projects = list(filter(None, client.config["project_slugs"].split(" ")))
+    projects = client.config.get("project_slugs", "").split()
 
     # Stream execution priority
     PRIORITY = {

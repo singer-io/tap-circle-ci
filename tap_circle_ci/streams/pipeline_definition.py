@@ -24,11 +24,19 @@ class PipelineDefinition(FullTableStream):
     requires_project = False
 
     def get_parent_projects(self):
-        """Fetch project IDs from the Project stream."""
+        """Fetch project IDs from the Project stream, filtered by config."""
         from .project import Project
         project_stream = Project(self.client)
-        projects = project_stream.prefetch_project_ids()
-        return projects
+        all_projects = project_stream.prefetch_project_ids()
+
+        # Filter to only configured project slugs
+        configured_slugs = set(self.client.config.get("project_slugs", "").split())
+        filtered_projects = [p for p in all_projects if p.get("slug") in configured_slugs]
+
+        if not filtered_projects:
+            LOGGER.warning("No configured projects found in synced projects")
+
+        return filtered_projects
 
     def get_projects(self, state: Dict) -> Tuple[List, int]:
         """Returns projects and index for sync resuming on interruption."""
